@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#080808">
+    <meta name="description" content="EFAHub — gestão inteligente para negócios de beleza, conectando clientes, profissionais e empresas.">
+    <link rel="icon" type="image/svg+xml" href="efahub-logo.svg">
+    <title>EFAHub — Gestão inteligente</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="contact-utils.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <a class="brand" href="#" aria-label="EFAHub início">
+          <img class="brand-mark" src="efahub-logo.svg" alt="">
+          <span><span class="brand-strong">EFA</span><span class="brand-light">Hub</span></span>
+        </a>
+
+        <div class="shop-switcher">
+          <span class="shop-avatar"><img id="shop-logo-sidebar" alt="" hidden><span id="shop-initial">B</span></span>
+          <span class="shop-copy">
+            <strong id="shop-name-sidebar">Barbearia Demo</strong>
+            <small>Espaço de demonstração</small>
+          </span>
+          <span class="switcher-arrow" aria-hidden="true">⌄</span>
+        </div>
+
+        <p class="nav-label">MENU</p>
+        <nav class="main-nav">
+          <button class="nav-item active" data-view="overview" type="button" aria-label="Dashboard" title="Dashboard">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"></rect><rect x="13" y="3" width="8" height="5" rx="2"></rect><rect x="13" y="10" width="8" height="11" rx="2"></rect><rect x="3" y="13" width="8" height="8" rx="2"></rect></svg></span><span class="nav-label-text">Dashboard</span>
+          </button>
+          <button class="nav-item" data-view="ecosystem" type="button" aria-label="Ecossistema EFAHub" title="Ecossistema EFAHub">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="6" r="2"></circle><circle cx="5" cy="18" r="2"></circle><circle cx="19" cy="18" r="2"></circle><path d="m7 7.5 3 2.8m7-2.8-3 2.8m-7 6.2 3-2.8m7 2.8-3-2.8"></path></svg></span><span class="nav-label-text">Ecossistema</span>
+          </button>
+          <button class="nav-item" data-view="agenda" type="button" aria-label="Agenda" title="Agenda">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg></span><span class="nav-label-text">Agenda</span>
+            <span class="nav-count" id="nav-count">0</span>
+          </button>
+          <button class="nav-item" data-view="clients" type="button" aria-label="Clientes" title="Clientes">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span><span class="nav-label-text">Clientes</span>
+          </button>
+          <button class="nav-item" data-view="team" aria-label="Equipe" title="Equipe" type="button">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6M23 11h-6"></path></svg></span><span class="nav-label-text">Equipe</span>
+          </button>
+          <button class="nav-item" data-view="services" aria-label="Serviços" title="Serviços" type="button">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m14.5 6.5 3-3a4.24 4.24 0 0 1 0 6L10 17l-3 3a4.24 4.24 0 0 1 0-6l7.5-7.5ZM8.5 8.5l-5-5a4.24 4.24 0 0 0 0 6L12 18M16 12l5 5a4.24 4.24 0 0 1-6 0l-2-2"></path></svg></span><span class="nav-label-text">Serviços</span>
+          </button>
+          <button class="nav-item" data-view="products" type="button" aria-label="Produtos e estoque" title="Produtos e estoque">
+            <span class="nav-icon" aria-hidden="true">▤</span><span class="nav-label-text">Produtos</span>
+          </button>
+          <button class="nav-item" data-view="waitlist" type="button" aria-label="Lista de espera" title="Lista de espera">
+            <span class="nav-icon" aria-hidden="true">◷</span><span class="nav-label-text">Espera</span>
+          </button>
+          <button class="nav-item" data-view="finance" type="button" aria-label="Financeiro" title="Financeiro">
+            <span class="nav-icon" aria-hidden="true">R$</span><span class="nav-label-text">Financeiro</span>
+          </button>
+          <button class="nav-item" data-view="public-page" type="button" aria-label="Página pública" title="Página pública">
+            <span class="nav-icon" aria-hidden="true">↗</span><span class="nav-label-text">Página pública</span>
+          </button>
+          <button class="nav-item" data-view="support" type="button" aria-label="Suporte" title="Suporte">
+            <span class="nav-icon" aria-hidden="true">?</span><span class="nav-label-text">Suporte</span>
+          </button>
+          <button class="nav-item nav-ai" data-view="intelligence" aria-label="EFA AI" title="EFA AI" type="button">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-2.1-5.8L4 11l5.9-2.2L12 3Z"></path><path d="m19 14 .9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14Z"></path></svg></span><span class="nav-label-text">EFA AI</span>
+          </button>
+          <button class="nav-item" data-view="settings" aria-label="Configurações" title="Configurações" type="button">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"></path><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.7a8.4 8.4 0 0 1-1.8 1l-.3 1.8h-2.8l-.3-1.8a8.4 8.4 0 0 1-1.8-1l-1.7.7-1.4-2.4 1.4-1.1a7.7 7.7 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.7a8.4 8.4 0 0 1 1.8-1l.3-1.8h2.8l.3 1.8a8.4 8.4 0 0 1 1.8 1l1.7-.7 1.4 2.4-1.4 1.1a7.7 7.7 0 0 1 0 1.9Z"></path></svg></span><span class="nav-label-text">Config.</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="demo-card">
+            <span class="demo-dot"></span>
+            <div>
+              <strong>Modo demonstração</strong>
+              <p>Dados salvos apenas neste navegador.</p>
+            </div>
+          </div>
+          <button id="clear-data" class="text-button" type="button">Restaurar dados de demonstração</button>
+          <div class="user-chip">
+            <span class="user-avatar" id="professional-avatar">BF</span>
+            <span><strong id="professional-name-sidebar">Administrador</strong><small>Perfil local</small></span>
+            <span class="user-menu" aria-hidden="true">···</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="mobile-brand">
+            <img class="brand-mark" src="efahub-logo.svg" alt="">
+            <span><span class="brand-strong">EFA</span><span class="brand-light">Hub</span></span>
+          </div>
+          <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Recolher menu lateral" title="Recolher menu lateral">☰</button>
+          <div class="breadcrumb"><span>Negócio</span><span class="breadcrumb-separator">/</span><strong id="breadcrumb-current">Visão geral</strong></div>
+          <div class="topbar-actions">
+            <span class="today-label" id="today-label"></span>
+            <button class="command-trigger" id="command-trigger" type="button" aria-label="Abrir busca e comandos"><span>⌕</span><span>Buscar</span><kbd>Ctrl K</kbd></button>
+            <button class="icon-button theme-toggle" id="theme-toggle" type="button" aria-label="Ativar tema claro" title="Ativar tema claro"><span id="theme-toggle-icon" aria-hidden="true">☼</span></button>
+            <button class="icon-button" id="today-button" type="button" aria-label="Ir para hoje" title="Ir para hoje">◷</button>
+            <button class="avatar-button" id="professional-avatar-top" type="button" aria-label="Perfil da conta">BF</button>
+          </div>
+        </header>
+
+        <div class="content-wrap">
+          <section class="view-panel dashboard" id="overview-view">
+            <div class="dashboard-header">
+              <div class="dashboard-title">
+                <p class="eyebrow" id="greeting">GESTÃO INTELIGENTE PARA NEGÓCIOS DE BELEZA</p>
+                <h1 id="dashboard-shop-name">Barbearia Demo</h1>
+                <p class="subheading"><span id="dashboard-greeting">Bom dia</span> — aqui está o resumo da sua operação.</p>
+              </div>
+              <div class="dashboard-actions">
+                <button class="button button-secondary" id="export-report" type="button"><span aria-hidden="true">↓</span> Exportar relatório</button>
+                <button class="button button-accent" id="refresh-dashboard" type="button"><span aria-hidden="true">↻</span> Atualizar dados</button>
+              </div>
+            </div>
+            <div class="dashboard-toolbar">
+              <div class="period-tabs" role="group" aria-label="Período do dashboard">
+                <button class="period-button" data-period="today" type="button">Hoje</button>
+                <button class="period-button" data-period="week" type="button">Semana</button>
+                <button class="period-button active" data-period="month" type="button">Mês</button>
+                <button class="period-button" data-period="quarter" type="button">Trimestre</button>
+                <button class="period-button" data-period="year" type="button">Ano</button>
+                <button class="period-button" data-period="custom" type="button">Personalizado</button>
+              </div>
+              <div class="custom-period hidden" id="custom-period">
+                <label for="period-start">De</label><input id="period-start" type="date">
+                <label for="period-end">até</label><input id="period-end" type="date">
+              </div>
+              <div class="period-meta"><span class="live-indicator"></span><span id="period-label"></span></div>
+            </div>
+
+            <div class="demo-notice dashboard-notice"><span aria-hidden="true">ⓘ</span> Painel demonstrativo: indicadores usam somente os agendamentos salvos neste navegador. Pagamentos, despesas, avaliações e eventos de marketing ainda não estão registrados.</div>
+
+            <section class="copilot-hero" aria-labelledby="copilot-heading">
+              <div class="copilot-glow" aria-hidden="true"></div>
+              <div class="copilot-topline"><span class="copilot-orb">✳</span><span class="copilot-status"><i></i> EFA AI · DADOS LOCAIS</span><button class="copilot-open" data-view="intelligence" type="button">Abrir assistente <span aria-hidden="true">↗</span></button></div>
+              <div class="copilot-content">
+                <div class="copilot-greeting"><p class="section-kicker">COPILOTO DA BARBEARIA</p><h2 id="copilot-heading">Bom dia. Vamos cuidar do seu negócio.</h2><p id="copilot-summary">Analisando sua agenda deste período...</p></div>
+                <div class="copilot-insights" id="copilot-insights"></div>
+              </div>
+              <div class="copilot-footer"><span>Resumo baseado nos agendamentos registrados. Sem IA externa ou atualização em tempo real.</span><button class="button button-accent button-small" data-action="optimize-agenda" type="button">Revisar minha agenda <span aria-hidden="true">→</span></button></div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="kpi-heading">
+              <div class="dashboard-section-heading"><div><p class="section-kicker">DESEMPENHO DO PERÍODO</p><h2 id="kpi-heading">Indicadores principais</h2><p>Valores realizados e reservas, sem estimar dados que ainda não existem.</p></div></div>
+              <div class="kpi-grid" id="kpi-grid"></div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="finance-heading">
+              <div class="dashboard-section-heading"><div><p class="section-kicker">VISÃO FINANCEIRA</p><h2 id="finance-heading">Performance financeira</h2><p>Valor de serviços concluídos não representa pagamento confirmado.</p></div></div>
+              <div class="dashboard-grid finance-grid">
+                <article class="dashboard-card chart-card">
+                  <div class="card-heading"><div><h3>Evolução dos serviços concluídos</h3><p>Valor registrado por atendimento, no período selecionado</p></div><span class="chart-legend"><i></i> Concluídos</span></div>
+                  <div class="chart-container" id="revenue-chart"></div>
+                </article>
+                <article class="dashboard-card breakdown-card">
+                  <div class="card-heading"><div><h3>Serviços por categoria</h3><p>Distribuição de atendimentos concluídos</p></div><span class="card-more" title="Calculado pelo preço salvo no agendamento">ⓘ</span></div>
+                  <div id="service-breakdown"></div>
+                </article>
+                <article class="dashboard-card compact-card">
+                  <div class="card-heading"><div><h3>Receita recebida</h3><p>Pagamentos confirmados</p></div><span class="card-more" title="O MVP ainda não registra recebimentos.">ⓘ</span></div>
+                  <div class="unavailable-value">—</div><p class="empty-note">Ainda não há registro de pagamentos.</p>
+                </article>
+                <article class="dashboard-card compact-card">
+                  <div class="card-heading"><div><h3>Receita pendente</h3><p>Valores aguardando pagamento</p></div><span class="card-more" title="O MVP ainda não possui status de pagamento.">ⓘ</span></div>
+                  <div class="unavailable-value">—</div><p class="empty-note">O status financeiro não está disponível nesta versão.</p>
+                </article>
+                <article class="dashboard-card compact-card">
+                  <div class="card-heading"><div><h3>Despesas operacionais</h3><p>Registros no período</p></div></div>
+                  <div class="unavailable-value">—</div><p class="empty-note">Cadastre despesas quando o módulo financeiro estiver disponível.</p>
+                </article>
+                <article class="dashboard-card compact-card">
+                  <div class="card-heading"><div><h3>Resultado operacional</h3><p>Receitas recebidas menos despesas</p></div></div>
+                  <div class="unavailable-value">—</div><p class="empty-note">Não calculado: recebimentos e despesas não são registrados.</p>
+                </article>
+              </div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="operations-heading">
+              <div class="dashboard-section-heading"><div><p class="section-kicker">OPERAÇÃO DA BARBEARIA</p><h2 id="operations-heading">Serviços e capacidade</h2><p>Atendimentos e duração cadastrados na sua agenda.</p></div></div>
+              <div class="dashboard-grid operations-grid">
+                <article class="dashboard-card service-ranking-card"><div class="card-heading"><div><h3>Ranking de serviços</h3><p>Por atendimentos concluídos no período</p></div></div><div id="service-ranking"></div></article>
+                <article class="dashboard-card capacity-card"><div class="card-heading"><div><h3>Capacidade da agenda</h3><p>Tempo ocupado sobre o horário configurado</p></div></div><div id="capacity-summary"></div></article>
+                <article class="dashboard-card schedule-card"><div class="card-heading"><div><h3>Próximos atendimentos</h3><p>Reservas futuras no período selecionado</p></div><button class="text-link" data-view="agenda" type="button">Abrir agenda →</button></div><div id="upcoming-list"></div></article>
+                <article class="dashboard-card barber-card"><div class="card-heading"><div><h3>Desempenho da equipe</h3><p>Receita e comissão de atendimentos concluídos</p></div><button class="text-link" data-view="team" type="button">Ver equipe →</button></div><div id="barber-performance"></div></article>
+                <article class="dashboard-card activity-card"><div class="card-heading"><div><h3>Atividade recente</h3><p>Eventos registrados neste navegador</p></div><span class="activity-indicator"><i></i> LOCAL</span></div><div id="activity-timeline"></div></article>
+              </div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="customers-heading">
+              <div class="dashboard-section-heading"><div><p class="section-kicker">RELACIONAMENTO</p><h2 id="customers-heading">Comportamento dos clientes</h2><p>Contagem baseada nos nomes associados aos agendamentos concluídos.</p></div></div>
+              <div class="dashboard-grid customers-grid">
+                <article class="dashboard-card customer-card"><div class="card-heading"><div><h3>Novos e recorrentes</h3><p>Clientes identificados no histórico</p></div></div><div id="customer-segments"></div></article>
+                <article class="dashboard-card customer-card"><div class="card-heading"><div><h3>Retenção e retorno</h3><p>Último atendimento concluído</p></div></div><div id="customer-retention"></div></article>
+                <article class="dashboard-card customer-card"><div class="card-heading"><div><h3>CRM e fidelização</h3><p>Segmentos disponíveis no histórico</p></div></div><div id="crm-summary"></div></article>
+              </div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="opportunity-heading">
+              <div class="dashboard-section-heading"><div><p class="section-kicker">CRESCIMENTO COMERCIAL</p><h2 id="opportunity-heading">Radar de Oportunidades</h2><p>Oportunidades só serão exibidas quando houver eventos consentidos registrados.</p></div></div>
+              <div class="dashboard-grid opportunity-grid">
+                <article class="dashboard-card opportunity-summary"><div class="opportunity-orb">✦</div><div><h3>Seu radar está pronto para evoluir</h3><p>Esta demonstração não rastreia consultas de horários, intenções ou contatos de marketing. Nenhum dado pessoal é inferido para criar oportunidades.</p></div><span class="opportunity-tag">SEM EVENTOS</span></article>
+                <article class="dashboard-card opportunity-metrics"><div class="opportunity-metric"><span>Oportunidades abertas</span><strong>—</strong></div><div class="opportunity-metric"><span>Conversão</span><strong>—</strong></div><div class="opportunity-metric"><span>Receita recuperada</span><strong>—</strong></div></article>
+              </div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="insights-heading">
+              <div class="dashboard-section-heading"><div><p class="section-kicker">SINAIS DA OPERAÇÃO</p><h2 id="insights-heading">Insights e resumo executivo</h2><p>Observações calculadas a partir dos seus registros, sem comparações inventadas.</p></div></div>
+              <div class="dashboard-grid insights-grid">
+                <article class="dashboard-card insights-card"><div class="card-heading"><div><h3>O que merece atenção</h3><p>Leituras objetivas do período</p></div></div><div id="insights-list"></div></article>
+                <article class="dashboard-card executive-card"><div class="card-heading"><div><h3>Resumo executivo</h3><p>Principais resultados e pontos sem dados</p></div></div><div id="executive-summary"></div></article>
+              </div>
+            </section>
+          </section>
+
+          <section class="view-panel hidden" id="ecosystem-view">
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">VISÃO DE PRODUTO</p>
+                <h1>Um ecossistema. Toda a operação.</h1>
+                <p class="subheading">Experiências conectadas para clientes, profissionais e empresas de beleza.</p>
+              </div>
+              <span class="platform-status"><i></i> ARQUITETURA EM EVOLUÇÃO</span>
+            </div>
+            <div class="demo-notice dashboard-notice"><span aria-hidden="true">ⓘ</span> Esta versão continua sendo uma demonstração local. Os componentes identificados como planejados ainda não estão conectados a serviços ou dados compartilhados.</div>
+
+            <section class="platform-section" aria-labelledby="experiences-heading">
+              <div class="dashboard-section-heading"><div><p class="section-kicker">UMA EXPERIÊNCIA PARA CADA PESSOA</p><h2 id="experiences-heading">Plataformas do EFAHub</h2><p>Aplicativos e gestão administrativa sobre as mesmas regras de negócio.</p></div></div>
+              <div class="platform-experience-grid">
+                <article class="dashboard-card platform-card">
+                  <div class="platform-card-top"><span class="platform-icon">✦</span><span class="platform-badge planned">PLANEJADO</span></div>
+                  <p class="section-kicker">APP MOBILE · CLIENTES</p>
+                  <h3>Descubra. Agende. Volte.</h3>
+                  <p>Busca de negócios e profissionais, favoritos, horários disponíveis, reagendamento, avaliações, fidelidade, cupons e notificações.</p>
+                  <div class="platform-tags"><span>iOS</span><span>Android</span><span>Flutter</span></div>
+                </article>
+                <article class="dashboard-card platform-card">
+                  <div class="platform-card-top"><span class="platform-icon">◈</span><span class="platform-badge planned">PLANEJADO</span></div>
+                  <p class="section-kicker">APP MOBILE · PROFISSIONAIS</p>
+                  <h3>Meu dia, em um só lugar.</h3>
+                  <p>Agenda, próximo atendimento, receita, comissão, metas, confirmação de chegada, registro de vendas e desempenho.</p>
+                  <div class="platform-tags"><span>iOS</span><span>Android</span><span>Flutter</span></div>
+                </article>
+                <article class="dashboard-card platform-card platform-card-current">
+                  <div class="platform-card-top"><span class="platform-icon">▦</span><span class="platform-badge local">BASE LOCAL</span></div>
+                  <p class="section-kicker">WEB · ADMINISTRAÇÃO</p>
+                  <h3>Visão completa do negócio.</h3>
+                  <p>Dashboard, agenda, clientes, equipe, serviços e comissões já podem ser explorados nesta demonstração, com dados salvos neste navegador.</p>
+                  <div class="platform-tags"><span>React + TypeScript · próxima etapa</span><span>HTML/CSS/JS · atual</span></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="platform-section" aria-labelledby="architecture-heading">
+              <div class="dashboard-section-heading"><div><p class="section-kicker">UMA ÚNICA FONTE DE VERDADE</p><h2 id="architecture-heading">Arquitetura compartilhada</h2><p>App e Web consumirão as mesmas APIs; as regras de negócio vivem no backend.</p></div></div>
+              <div class="platform-architecture">
+                <div class="architecture-clients">
+                  <div class="architecture-node"><span>01</span><strong>Apps Flutter</strong><small>Cliente · Profissional</small></div>
+                  <div class="architecture-node"><span>02</span><strong>Web administrativa</strong><small>React · TypeScript</small></div>
+                </div>
+                <div class="architecture-connector" aria-hidden="true"><span>APIs unificadas</span><i>→</i></div>
+                <div class="architecture-node architecture-core"><span>03 · BACKEND COMPARTILHADO</span><strong>Supabase</strong><small>Autenticação · Regras · APIs</small></div>
+                <div class="architecture-connector" aria-hidden="true"><span>persistência central</span><i>→</i></div>
+                <div class="architecture-node"><span>04</span><strong>PostgreSQL</strong><small>Dados centralizados</small></div>
+              </div>
+            </section>
+
+            <section class="platform-section" aria-labelledby="capabilities-heading">
+              <div class="dashboard-section-heading"><div><p class="section-kicker">SERVIÇOS DA PLATAFORMA</p><h2 id="capabilities-heading">Inteligência e operação</h2><p>Capacidades previstas para conectar os canais com segurança e consistência.</p></div></div>
+              <div class="platform-capability-grid">
+                <article class="dashboard-card platform-capability"><span class="capability-mark">◎</span><div><h3>Identidade e acesso</h3><p>E-mail e senha, Google e Apple; perfis e permissões separados por negócio.</p></div><span class="platform-badge planned">PLANEJADO</span></article>
+                <article class="dashboard-card platform-capability"><span class="capability-mark">↗</span><div><h3>Notificações</h3><p>FCM para lembretes e atualizações, com consentimento e preferências do cliente.</p></div><span class="platform-badge planned">PLANEJADO</span></article>
+                <article class="dashboard-card platform-capability"><span class="capability-mark">✳</span><div><h3>EFA AI e automações</h3><p>Análises ancoradas em dados autorizados e fluxos auditáveis para cada negócio.</p></div><span class="platform-badge prototype">PROTÓTIPO LOCAL</span></article>
+                <article class="dashboard-card platform-capability"><span class="capability-mark">⌁</span><div><h3>Observabilidade e auditoria</h3><p>Eventos, logs e métricas para acompanhar ações, falhas e integridade operacional.</p></div><span class="platform-badge planned">PLANEJADO</span></article>
+              </div>
+            </section>
+          </section>
+
+          <section class="view-panel hidden" id="clients-view">
+            <div class="page-heading">
+              <div><p class="eyebrow">RELACIONAMENTO COM CLIENTES</p><h1>Clientes</h1><p class="subheading">Visão resumida baseada nos atendimentos concluídos registrados.</p></div>
+              <button class="button button-accent" data-action="new-appointment" type="button"><span aria-hidden="true">＋</span> Novo agendamento</button>
+            </div>
+            <div class="demo-notice dashboard-notice"><span aria-hidden="true">ⓘ</span> Nesta demonstração, clientes são identificados pelo nome informado no agendamento. Não existe ainda cadastro CRM, sincronização ou perfil verificado.</div>
+            <div class="client-overview" id="client-overview"></div>
+            <article class="dashboard-card clients-card"><div class="card-heading"><div><h3>Histórico de visitas</h3><p>Clientes com pelo menos um atendimento concluído</p></div><button class="command-trigger" data-action="open-command" type="button"><span>⌕</span><span>Buscar cliente</span><kbd>Ctrl K</kbd></button></div><div class="clients-table-wrap"><table class="clients-table"><thead><tr><th>CLIENTE</th><th>VISITAS</th><th>TOTAL REGISTRADO</th><th>ÚLTIMA VISITA</th><th>STATUS</th></tr></thead><tbody id="clients-table-body"></tbody></table></div></article>
+          </section>
+
+          <section class="view-panel hidden" id="team-view">
+            <div class="page-heading">
+              <div><p class="eyebrow">GESTÃO DE PROFISSIONAIS</p><h1>Equipe</h1><p class="subheading">Desempenho, disponibilidade e comissões dos serviços concluídos.</p></div>
+              <button class="button button-accent" id="team-add-staff" type="button">＋ Adicionar profissional</button>
+            </div>
+            <div class="demo-notice dashboard-notice"><span aria-hidden="true">ⓘ</span> Demonstração local: a disponibilidade é calculada e validada no navegador. Validação de servidor, sincronização entre dispositivos, pagamentos externos e avaliações ainda não estão disponíveis. Somente atendimentos concluídos geram receita e comissão.</div>
+            <div class="dashboard-toolbar team-toolbar">
+              <div class="period-tabs team-period-tabs" role="group" aria-label="Período da equipe">
+                <button class="period-button" data-team-period="today" type="button">Dia</button>
+                <button class="period-button" data-team-period="week" type="button">Semana</button>
+                <button class="period-button active" data-team-period="month" type="button">Mês</button>
+                <button class="period-button" data-team-period="year" type="button">Ano</button>
+                <button class="period-button" data-team-period="custom" type="button">Personalizado</button>
+              </div>
+              <div class="custom-period hidden" id="team-custom-period">
+                <label for="team-period-start">De</label><input id="team-period-start" type="date">
+                <label for="team-period-end">até</label><input id="team-period-end" type="date">
+              </div>
+              <div class="team-report-actions">
+                <button class="button button-secondary button-small" id="export-team-csv" type="button">Exportar CSV</button>
+                <button class="button button-secondary button-small" id="export-team-pdf" type="button">Imprimir / PDF</button>
+              </div>
+            </div>
+            <div class="team-overview" id="team-overview"></div>
+            <section class="dashboard-section"><div class="dashboard-section-heading"><div><p class="section-kicker">EFA INTELLIGENCE</p><h2>Sinais da equipe</h2><p>Alertas calculados somente a partir de registros concluídos e jornadas cadastradas.</p></div></div><div class="team-insights" id="team-insights"></div></section>
+            <section class="dashboard-section"><div class="dashboard-section-heading"><div><p class="section-kicker">PERFORMANCE</p><h2>Profissionais no período</h2><p>Receita realizada, ticket, comissão e ocupação calculados sobre atendimentos concluídos.</p></div><label class="team-sort-label" for="team-sort">Ordenar por<select class="text-input team-sort" id="team-sort"><option value="revenue">Faturamento</option><option value="count">Atendimentos</option><option value="ticket">Ticket médio</option><option value="commission">Comissão</option><option value="occupancy">Ocupação</option><option value="growth">Crescimento</option></select></label></div><div class="team-performance-list" id="team-performance-list"></div></section>
+            <section class="dashboard-section"><div class="dashboard-section-heading"><div><p class="section-kicker">FECHAMENTO</p><h2>Fechamento de comissões</h2><p>Comissões pendentes podem ser registradas como pagas com data e observação.</p></div></div><div class="commission-close-list" id="commission-close-list"></div></section>
+            <section class="dashboard-section"><div class="dashboard-section-heading"><div><p class="section-kicker">GESTÃO</p><h2>Cadastro e histórico</h2><p>Expediente individual, intervalos, folgas, bloqueios e atendimentos concluídos por profissional.</p></div></div>
+              <div class="team-management-grid">
+                <div class="staff-directory" id="staff-directory"></div>
+                <form class="settings-card staff-form team-editor" id="staff-form">
+                  <div class="settings-section-heading"><div><h2 id="staff-form-title">Novo profissional</h2><p>Cadastro, comissão e jornada de trabalho individual.</p></div></div>
+                  <input id="staff-id" type="hidden">
+                  <div class="form-row">
+                    <div><label class="field-label" for="staff-name-input">Nome</label><input class="text-input" id="staff-name-input" maxlength="80" autocomplete="name" required></div>
+                    <div><label class="field-label" for="staff-role-input">Cargo <span class="optional">(opcional)</span></label><input class="text-input" id="staff-role-input" maxlength="60" placeholder="Profissional"></div>
+                  </div>
+                  <div class="form-row">
+                    <div><label class="field-label" for="staff-phone-input">Telefone</label><input class="text-input" id="staff-phone-input" type="tel" maxlength="20" placeholder="(11) 99999-9999" required></div>
+                    <div><label class="field-label" for="staff-email-input">E-mail <span class="optional">(opcional)</span></label><input class="text-input" id="staff-email-input" type="email" maxlength="120" autocomplete="email"></div>
+                  </div>
+                  <div class="form-row">
+                    <div><label class="field-label" for="staff-joined-input">Data de entrada <span class="optional">(opcional)</span></label><input class="text-input" id="staff-joined-input" type="date"></div>
+                    <div>
+                      <label class="field-label" for="staff-commission-type-input">Tipo de comissão</label>
+                      <select class="text-input" id="staff-commission-type-input"><option value="percentage">Percentual</option><option value="fixed">Valor fixo por atendimento</option></select>
+                      <label class="field-label" id="staff-commission-value-label" for="staff-commission-input">Percentual (%)</label>
+                      <input class="text-input" id="staff-commission-input" type="number" min="0" max="100" step="0.01" value="40">
+                    </div>
+                  </div>
+                  <label class="field-label" for="staff-photo-input">Foto <span class="optional">(opcional)</span></label>
+                  <input class="text-input file-input" id="staff-photo-input" type="file" accept="image/png,image/jpeg,image/webp">
+                  <img class="staff-photo-preview hidden" id="staff-photo-preview" alt="Prévia da foto do profissional">
+                  <button class="text-button staff-photo-remove hidden" id="remove-staff-photo" type="button">Remover foto</button>
+                  <div class="form-row staff-settings-selects">
+                    <div><label class="field-label" for="staff-active-input">Status</label><select class="text-input" id="staff-active-input"><option value="true">Ativo</option><option value="false">Inativo</option></select></div>
+                  </div>
+                  <div class="staff-schedule-editor"><h3>Jornada semanal</h3><label class="day-toggle"><input id="staff-inherit-hours" type="checkbox" checked><span>Usar os horários do negócio como padrão</span></label><p>Desative para configurar dias, turnos e intervalos deste profissional.</p><div id="staff-weekly-schedule"></div></div>
+                  <div class="staff-blocks-editor">
+                    <h3>Folgas e bloqueios pontuais</h3>
+                    <div class="form-row">
+                      <div><label class="field-label" for="staff-block-date">Data</label><input class="text-input" id="staff-block-date" type="date"></div>
+                      <div><label class="field-label" for="staff-block-start">Início <span class="optional">(vazio = dia todo)</span></label><input class="text-input" id="staff-block-start" type="time" step="900"></div>
+                      <div><label class="field-label" for="staff-block-end">Fim</label><input class="text-input" id="staff-block-end" type="time" step="900"></div>
+                    </div>
+                    <label class="field-label" for="staff-block-note">Motivo / observação</label><input class="text-input" id="staff-block-note" maxlength="100">
+                    <button class="button button-secondary button-small" id="add-staff-block" type="button">Adicionar bloqueio</button>
+                    <div class="staff-block-list" id="staff-block-list"></div>
+                  </div>
+                  <div class="staff-form-actions">
+                    <button class="button button-primary" id="save-staff" type="submit">Adicionar à equipe</button>
+                    <button class="button button-secondary hidden" id="cancel-staff-edit" type="button">Cancelar edição</button>
+                  </div>
+                </form>
+              </div>
+            </section>
+            <section class="dashboard-section"><div class="dashboard-section-heading"><div><p class="section-kicker">PAGAMENTOS REGISTRADOS</p><h2>Histórico de comissões pagas</h2><p>Registros locais adicionados no fechamento.</p></div></div><div class="dashboard-card payment-history" id="commission-payment-history"></div></section>
+          </section>
+
+          <section class="view-panel hidden" id="intelligence-view">
+            <div class="page-heading">
+              <div><p class="eyebrow">ASSISTENTE DE NEGÓCIOS</p><h1>EFA AI</h1><p class="subheading">Pergunte sobre sua agenda e os registros do negócio.</p></div>
+              <span class="assistant-local-badge"><i></i> ASSISTENTE LOCAL</span>
+            </div>
+            <div class="demo-notice dashboard-notice"><span aria-hidden="true">ⓘ</span> Assistente demonstrativo baseado em regras locais. Não é uma IA generativa, não envia dados para serviços externos e responde somente o que os registros permitem.</div>
+            <div class="intelligence-layout">
+              <article class="dashboard-card assistant-card">
+                <div class="assistant-welcome"><span class="assistant-large-orb">✳</span><p class="section-kicker">COPILOTO EFAHUB</p><h2>O que você quer entender sobre o negócio?</h2><p>Consulte agenda, serviços concluídos e histórico de clientes.</p></div>
+                <div class="assistant-prompts"><button data-prompt="Qual serviço teve mais atendimentos concluídos?" type="button">Qual serviço teve mais atendimentos?</button><button data-prompt="Como está minha agenda hoje?" type="button">Como está minha agenda hoje?</button><button data-prompt="Quais clientes estão sem voltar?" type="button">Quais clientes estão sem voltar?</button></div>
+                <form id="assistant-form" class="assistant-input-row"><input id="assistant-question" type="search" maxlength="160" placeholder="Pergunte sobre agenda, serviços ou clientes..." autocomplete="off"><button class="button button-accent" type="submit">Consultar <span aria-hidden="true">→</span></button></form>
+                <div class="assistant-response hidden" id="assistant-response" role="status" aria-live="polite"></div>
+              </article>
+              <aside class="dashboard-card assistant-side"><div class="card-heading"><div><h3>Fluxos inteligentes</h3><p>Automação visual — prévia conceitual</p></div><span class="opportunity-tag">RASCUNHO</span></div>
+                <div class="flow-preview"><div class="flow-node"><span>01</span><strong>Cliente agenda</strong></div><div class="flow-connector"></div><div class="flow-node"><span>02</span><strong>24h antes</strong></div><div class="flow-connector"></div><div class="flow-node flow-node-muted"><span>03</span><strong>Enviar lembrete</strong></div></div>
+                <p class="empty-note">Este fluxo é apenas ilustrativo. Não há automações ou mensagens automáticas ativas nesta versão.</p>
+              </aside>
+            </div>
+            <section class="dashboard-section intelligence-activity"><div class="dashboard-section-heading"><div><p class="section-kicker">SISTEMA VIVO</p><h2>Atividade recente</h2><p>Ações registradas nesta instalação local.</p></div></div><div class="dashboard-card"><div id="intelligence-timeline"></div></div></section>
+          </section>
+
+          <section class="view-panel hidden" id="agenda-view">
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">ORGANIZE SEUS ATENDIMENTOS</p>
+                <h1>Agenda</h1>
+                <p class="subheading">Consulte e atualize seus agendamentos.</p>
+              </div>
+              <button class="button button-primary" data-action="new-appointment" type="button"><span aria-hidden="true">＋</span> Novo agendamento</button>
+            </div>
+
+            <div class="agenda-toolbar">
+              <div class="date-controls">
+                <button class="icon-button" id="previous-day" type="button" aria-label="Dia anterior">‹</button>
+                <input id="agenda-date" type="date" aria-label="Selecionar data">
+                <button class="icon-button" id="next-day" type="button" aria-label="Próximo dia">›</button>
+                <button class="button button-secondary button-small" id="agenda-today" type="button">Hoje</button>
+              </div>
+              <span class="agenda-summary" id="agenda-summary"></span>
+            </div>
+            <div class="agenda-card">
+              <div class="agenda-day-heading"><span id="agenda-day-label"></span><span>HORÁRIO</span></div>
+              <div id="agenda-timeline"></div>
+            </div>
+          </section>
+
+          <section class="view-panel hidden" id="services-view">
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">SEU CARDÁPIO</p>
+                <h1>Serviços</h1>
+                <p class="subheading">Defina os serviços oferecidos, seus preços e duração.</p>
+              </div>
+              <button class="button button-primary" id="add-service" type="button"><span aria-hidden="true">＋</span> Novo serviço</button>
+            </div>
+            <div class="demo-notice"><span aria-hidden="true">ⓘ</span> Os serviços iniciais são exemplos. Edite ou remova para refletir seu negócio.</div>
+            <div class="services-grid" id="services-list"></div>
+          </section>
+
+          <section class="view-panel hidden" id="products-view">
+            <div class="page-heading"><div><p class="eyebrow">CATÁLOGO E OPERAÇÃO</p><h1>Produtos e estoque</h1><p class="subheading">Cadastre produtos, acompanhe quantidades e registre vendas manuais.</p></div></div>
+            <div class="demo-notice"><span aria-hidden="true">ⓘ</span> Demonstração local: vendas e formas de pagamento são lançamentos manuais, não cobranças processadas. Estoque e histórico ficam somente neste navegador.</div>
+            <div class="dashboard-card product-editor">
+              <div class="card-heading"><div><h3 id="product-form-title">Novo produto</h3><p>Preço, custo e quantidade inicial.</p></div></div>
+              <form id="product-form">
+                <input id="product-id" type="hidden">
+                <div class="form-row">
+                  <div><label class="field-label" for="product-name">Nome</label><input class="text-input" id="product-name" maxlength="80" required></div>
+                  <div><label class="field-label" for="product-sku">SKU <span class="optional">(opcional)</span></label><input class="text-input" id="product-sku" maxlength="40"></div>
+                </div>
+                <div class="form-row">
+                  <div><label class="field-label" for="product-price">Preço de venda (R$)</label><input class="text-input" id="product-price" type="number" min="0" max="99999" step="0.01" required></div>
+                  <div><label class="field-label" for="product-cost">Custo unitário (R$) <span class="optional">(opcional)</span></label><input class="text-input" id="product-cost" type="number" min="0" max="99999" step="0.01"></div>
+                  <div><label class="field-label" for="product-stock">Estoque inicial</label><input class="text-input" id="product-stock" type="number" min="0" max="99999" step="1" value="0" required></div>
+                  <div><label class="field-label" for="product-min-stock">Alerta de estoque baixo</label><input class="text-input" id="product-min-stock" type="number" min="0" max="99999" step="1" value="0" required></div>
+                </div>
+                <div class="product-form-actions"><button class="button button-primary" type="submit" id="save-product">Cadastrar produto</button><button class="button button-secondary hidden" type="button" id="cancel-product-edit">Cancelar edição</button></div>
+              </form>
+            </div>
+            <div class="dashboard-card product-sale-card">
+              <div class="card-heading"><div><h3>Registrar venda</h3><p>O lançamento manual atualiza o estoque local.</p></div></div>
+              <form id="product-sale-form">
+                <div class="form-row">
+                  <div><label class="field-label" for="sale-product">Produto</label><select class="text-input" id="sale-product" required></select></div>
+                  <div><label class="field-label" for="sale-quantity">Quantidade</label><input class="text-input" id="sale-quantity" type="number" min="1" step="1" value="1" required></div>
+                  <div><label class="field-label" for="sale-payment-method">Forma de pagamento</label><select class="text-input" id="sale-payment-method" required><option value="cash">Dinheiro</option><option value="pix">PIX (lançamento manual)</option><option value="card">Cartão (lançamento manual)</option><option value="receivable">A receber</option></select></div>
+                </div>
+                <p class="field-help">Total previsto: <strong id="sale-total-preview">R$ 0,00</strong>. Nenhum provedor de pagamento está conectado.</p>
+                <button class="button button-accent" type="submit">Registrar venda manual</button>
+              </form>
+            </div>
+            <section class="dashboard-section"><div class="dashboard-section-heading"><div><p class="section-kicker">INVENTÁRIO</p><h2>Produtos cadastrados</h2><p id="products-summary"></p></div></div><div class="product-grid" id="products-list"></div></section>
+          </section>
+
+          <section class="view-panel hidden" id="waitlist-view">
+            <div class="page-heading"><div><p class="eyebrow">RECUPERE HORÁRIOS VAGOS</p><h1>Lista de espera</h1><p class="subheading">Registre clientes que pediram um encaixe e convide-os manualmente quando surgir disponibilidade.</p></div></div>
+            <div class="demo-notice"><span aria-hidden="true">ⓘ</span> A lista é local. Não há monitoramento automático de vagas nem envio de convites nesta versão.</div>
+            <div class="dashboard-card waitlist-form-card">
+              <div class="card-heading"><div><h3>Adicionar à lista</h3><p>O cliente entra voluntariamente para aguardar um encaixe.</p></div></div>
+              <form id="waitlist-form">
+                <div class="form-row">
+                  <div><label class="field-label" for="waitlist-name">Nome</label><input class="text-input" id="waitlist-name" maxlength="80" required></div>
+                  <div><label class="field-label" for="waitlist-phone">Telefone <span class="optional">(opcional)</span></label><input class="text-input" id="waitlist-phone" type="tel" maxlength="20" placeholder="(11) 99999-9999"></div>
+                  <div><label class="field-label" for="waitlist-service">Serviço</label><select class="text-input" id="waitlist-service" required></select></div>
+                  <div><label class="field-label" for="waitlist-date">Data desejada</label><input class="text-input" id="waitlist-date" type="date" required></div>
+                </div>
+                <button class="button button-primary" type="submit">Adicionar à lista</button>
+              </form>
+            </div>
+            <section class="dashboard-section"><div class="dashboard-section-heading"><div><p class="section-kicker">PEDIDOS REGISTRADOS</p><h2>Clientes aguardando encaixe</h2><p>Convites precisam ser feitos fora do sistema; a disponibilidade é confirmada ao agendar.</p></div></div><div class="dashboard-card waitlist-list" id="waitlist-list"></div></section>
+          </section>
+
+          <section class="view-panel hidden" id="finance-view">
+            <div class="page-heading"><div><p class="eyebrow">VENDAS REGISTRADAS</p><h1>Financeiro</h1><p class="subheading">Acompanhe lançamentos manuais de produtos e diferencie valores recebidos de valores a receber.</p></div><button class="button button-secondary" id="export-sales-csv" type="button">Exportar CSV</button></div>
+            <div class="demo-notice"><span aria-hidden="true">ⓘ</span> Este resumo não é um extrato bancário. Serviços concluídos na agenda não significam pagamentos recebidos; meios de pagamento externos não são processados aqui.</div>
+            <div class="finance-summary-grid" id="finance-summary"></div>
+            <article class="dashboard-card sales-history-card"><div class="card-heading"><div><h3>Histórico de vendas de produtos</h3><p>Registros feitos neste navegador</p></div></div><div class="sales-list" id="sales-list"></div></article>
+            <article class="settings-card future-finance-card"><h2>Outros controles financeiros</h2><p>Despesas, pagamento dividido, sinal online, estorno e integração com adquirentes dependem de uma API segura e provedor configurado. Não estão ativos nesta demonstração.</p></article>
+          </section>
+
+          <section class="view-panel hidden" id="public-page-view">
+            <div class="page-heading"><div><p class="eyebrow">PRESENÇA DIGITAL</p><h1>Página pública</h1><p class="subheading">Prévia local do perfil compartilhável da empresa.</p></div><button class="button button-secondary" data-view="settings" type="button">Editar informações</button></div>
+            <div class="demo-notice"><span aria-hidden="true">ⓘ</span> Esta é uma prévia neste navegador, não uma página publicada. O endereço público, descoberta e agendamento online real dependem de hospedagem, backend e APIs.</div>
+            <div class="public-preview-shell" id="public-page-preview"></div>
+          </section>
+
+          <section class="view-panel hidden" id="support-view">
+            <div class="page-heading"><div><p class="eyebrow">CENTRAL DE AJUDA</p><h1>Suporte</h1><p class="subheading">Registre uma solicitação local e consulte os canais configurados.</p></div></div>
+            <div class="demo-notice"><span aria-hidden="true">ⓘ</span> Esta demonstração não envia solicitações para uma equipe de suporte. Não inclua dados pessoais sensíveis.</div>
+            <div class="support-layout">
+              <form class="dashboard-card support-form" id="support-form">
+                <div class="card-heading"><div><h3>Nova solicitação</h3><p>O registro ficará somente neste navegador.</p></div></div>
+                <label class="field-label" for="support-category">Assunto</label><select class="text-input" id="support-category" required><option value="account">Conta e acesso</option><option value="schedule">Agenda e agendamento</option><option value="finance">Financeiro</option><option value="privacy">Privacidade e dados</option><option value="other">Outro assunto</option></select>
+                <label class="field-label" for="support-message">Como podemos ajudar?</label><textarea class="text-input text-area" id="support-message" maxlength="1000" rows="5" required></textarea>
+                <button class="button button-primary" type="submit">Salvar solicitação local</button>
+              </form>
+              <aside class="dashboard-card support-links-card"><div class="card-heading"><div><h3>Canais e informações</h3><p>Links da empresa, se configurados</p></div></div><div id="support-links"></div><p class="empty-note">Termos e política devem ser documentos próprios do EFAHub, revisados antes da publicação.</p></aside>
+            </div>
+            <section class="dashboard-section"><div class="dashboard-section-heading"><div><p class="section-kicker">HISTÓRICO LOCAL</p><h2>Solicitações</h2></div></div><div class="dashboard-card support-ticket-list" id="support-tickets"></div></section>
+          </section>
+
+          <section class="view-panel hidden" id="settings-view">
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">PERSONALIZE SEU ESPAÇO</p>
+                <h1>Configurações</h1>
+                <p class="subheading">Informações locais desta demonstração.</p>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-section-heading"><div><h2>Marca e identidade</h2><p>Personalize como seu negócio aparece na plataforma.</p></div></div>
+              <div class="brand-settings">
+                <div class="logo-preview" id="logo-preview"><span id="logo-placeholder">Logo</span><img id="logo-preview-image" alt="Prévia da logo" hidden></div>
+                <div class="logo-controls">
+                  <label class="field-label" for="shop-name-input">Nome do negócio</label>
+                  <input class="text-input" id="shop-name-input" maxlength="60" required>
+                  <label class="field-label" for="business-category-input">Categoria do negócio</label>
+                  <select class="text-input" id="business-category-input">
+                    <option value="beauty">Salão de beleza</option><option value="barbershop">Barbearia</option><option value="aesthetics">Clínica de estética</option><option value="brows">Design de sobrancelhas / cílios</option><option value="nails">Manicure / pedicure</option><option value="health">Profissional da saúde</option><option value="fitness">Personal trainer</option><option value="education">Professor particular</option><option value="other">Outro negócio com hora marcada</option>
+                  </select>
+                  <label class="field-label" for="public-slug-input">Identificador da página <span class="optional">(prévia local)</span></label>
+                  <input class="text-input" id="public-slug-input" maxlength="40" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" autocomplete="off" required>
+                  <label class="day-toggle public-booking-toggle"><input id="online-booking-input" type="checkbox"><span>Permitir agendamentos online na página pública</span></label>
+                  <p class="field-help">A opção controla apenas a prévia nesta demonstração; não publica a página nem recebe reservas externas.</p>
+                  <label class="field-label" for="shop-logo-input">Logo do negócio</label>
+                  <input class="text-input file-input" id="shop-logo-input" type="file" accept="image/png,image/jpeg,image/webp">
+                  <p class="field-help">PNG, JPG ou WebP, até 8 MB. A imagem é reduzida e salva somente neste navegador.</p>
+                  <button class="button button-secondary button-small" id="remove-shop-logo" type="button">Remover logo</button>
+                  <div class="form-error hidden" id="logo-error" role="alert"></div>
+                </div>
+              </div>
+            </div>
+            <section class="settings-card appearance-card" aria-labelledby="appearance-heading">
+              <div class="settings-section-heading"><div><h2 id="appearance-heading">Aparência</h2><p>Escolha como o EFAHub aparece neste dispositivo.</p></div></div>
+              <div class="theme-options" role="group" aria-label="Tema da interface">
+                <button class="theme-option" type="button" data-theme-choice="light" aria-pressed="false"><span aria-hidden="true">☼</span> Claro</button>
+                <button class="theme-option" type="button" data-theme-choice="dark" aria-pressed="true"><span aria-hidden="true">☾</span> Escuro</button>
+              </div>
+            </section>
+
+            <form id="settings-form">
+              <section class="settings-card">
+                <div class="settings-section-heading"><div><h2>Perfil profissional</h2><p>Informações de quem administra os atendimentos.</p></div></div>
+                <div class="form-row">
+                  <div><label class="field-label" for="professional-name-input">Nome do profissional</label><input class="text-input" id="professional-name-input" maxlength="80" placeholder="Seu nome"></div>
+                  <div><label class="field-label" for="professional-phone-input">Telefone / WhatsApp</label><input class="text-input" id="professional-phone-input" type="tel" maxlength="20" placeholder="(11) 99999-9999"></div>
+                </div>
+                <label class="field-label" for="professional-bio-input">Apresentação</label>
+                <textarea class="text-input text-area" id="professional-bio-input" maxlength="240" rows="3" placeholder="Conte um pouco sobre seu trabalho"></textarea>
+              </section>
+
+              <section class="settings-card">
+                <div class="settings-section-heading"><div><h2>Contato e localização</h2><p>Dados para clientes encontrarem e contatarem o negócio.</p></div></div>
+                <div class="form-row">
+                  <div><label class="field-label" for="shop-phone-input">Telefone do negócio</label><input class="text-input" id="shop-phone-input" type="tel" maxlength="20" placeholder="(11) 99999-9999"></div>
+                  <div><label class="field-label" for="shop-address-input">Endereço</label><input class="text-input" id="shop-address-input" maxlength="140" placeholder="Rua, número, bairro e cidade"></div>
+                </div>
+              </section>
+
+              <section class="settings-card">
+                <div class="settings-section-heading"><div><h2>Links e canais oficiais</h2><p>Endereços opcionais exibidos na central de suporte local.</p></div></div>
+                <div class="form-row">
+                  <div><label class="field-label" for="business-instagram-input">Instagram</label><input class="text-input" id="business-instagram-input" type="url" maxlength="200" placeholder="https://instagram.com/"></div>
+                  <div><label class="field-label" for="business-support-input">Suporte</label><input class="text-input" id="business-support-input" type="url" maxlength="200" placeholder="https://"></div>
+                </div>
+                <div class="form-row">
+                  <div><label class="field-label" for="business-terms-input">Termos de Uso</label><input class="text-input" id="business-terms-input" type="url" maxlength="200" placeholder="https://"></div>
+                  <div><label class="field-label" for="business-privacy-input">Política de Privacidade</label><input class="text-input" id="business-privacy-input" type="url" maxlength="200" placeholder="https://"></div>
+                </div>
+                <p class="field-help">Use apenas URLs oficiais e documentos próprios, publicados após revisão adequada.</p>
+              </section>
+
+              <section class="settings-card">
+                <div class="settings-section-heading"><div><h2>Horários de atendimento</h2><p>Defina os dias e horários em que a agenda aceita reservas.</p></div></div>
+                <div class="business-hours-list" id="business-hours-list"></div>
+              </section>
+
+              <section class="settings-card">
+                <div class="settings-section-heading"><div><h2>Equipe e comissões</h2><p>Cadastre profissionais, horários individuais e acompanhe pagamentos.</p></div><button class="button button-secondary button-small" data-view="team" type="button">Abrir equipe →</button></div>
+              </section>
+
+              <div class="settings-save-row">
+                <p class="field-help">As alterações são salvas apenas neste navegador.</p>
+                <button class="button button-primary" type="submit">Salvar configurações</button>
+              </div>
+            </form>
+            <div class="settings-card settings-warning">
+              <div><h2>Sobre os dados</h2><p>Esta versão não tem conta, banco de dados ou sincronização. Não cadastre dados reais de clientes. Para uso real, será necessário implementar autenticação, servidor e controles de privacidade.</p></div>
+              <button class="button button-secondary" id="settings-clear-data" type="button">Restaurar demonstração</button>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <dialog class="command-dialog" id="command-dialog" aria-labelledby="command-title">
+      <div class="command-shell">
+        <div class="command-search-row"><span aria-hidden="true">⌕</span><label class="sr-only" id="command-title" for="command-search">Buscar clientes ou executar comandos</label><input id="command-search" type="search" placeholder="Buscar página, cliente ou ação..." autocomplete="off"><kbd>ESC</kbd></div>
+        <div class="command-results" id="command-results"></div>
+        <div class="command-footer"><span>BUSCA LOCAL</span><span><kbd>↑↓</kbd> navegar <kbd>↵</kbd> abrir</span></div>
+      </div>
+    </dialog>
+
+    <dialog class="app-dialog" id="appointment-dialog" aria-labelledby="appointment-dialog-title">
+      <form id="appointment-form" method="dialog">
+        <input id="waitlist-entry-id" type="hidden">
+        <input id="appointment-edit-id" type="hidden">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">RESERVE UM HORÁRIO</p><h2 id="appointment-dialog-title">Novo agendamento</h2></div>
+          <button class="icon-button dialog-close" type="button" data-close-dialog aria-label="Fechar">×</button>
+        </div>
+        <label class="field-label" for="customer-name">Nome do cliente</label>
+        <input class="text-input" id="customer-name" name="customerName" maxlength="80" autocomplete="name" required>
+        <label class="field-label" for="customer-phone">WhatsApp <span class="optional">(opcional)</span></label>
+        <input class="text-input" id="customer-phone" name="customerPhone" type="tel" autocomplete="tel" placeholder="(11) 99999-9999">
+        <div class="form-row">
+          <div><label class="field-label" for="service-select">Serviço</label><select class="text-input" id="service-select" name="serviceId" required></select></div>
+          <div><label class="field-label" for="appointment-date">Data</label><input class="text-input" id="appointment-date" name="date" type="date" required></div>
+        </div>
+        <div class="form-row">
+          <div><label class="field-label" for="appointment-staff">Profissional</label><select class="text-input" id="appointment-staff" name="staffId" required></select></div>
+          <div><label class="field-label" for="appointment-time">Horários disponíveis</label><select class="text-input" id="appointment-time" name="time" required disabled><option value="">Selecione serviço, data e profissional</option></select></div>
+        </div>
+        <label class="field-label" for="appointment-notes">Observação <span class="optional">(opcional)</span></label><input class="text-input" id="appointment-notes" name="notes" maxlength="160" placeholder="Ex.: prefere degradê">
+        <div class="recurrence-fields">
+          <label class="day-toggle"><input id="appointment-recurring" name="recurring" type="checkbox"><span>Repetir este agendamento</span></label>
+          <div class="form-row hidden" id="recurrence-options">
+            <div><label class="field-label" for="recurrence-interval">Frequência</label><select class="text-input" id="recurrence-interval" name="recurrenceInterval"><option value="7">Semanal</option><option value="14">Quinzenal</option><option value="month">Mensal</option></select></div>
+            <div><label class="field-label" for="recurrence-count">Quantidade de horários (incluindo este)</label><input class="text-input" id="recurrence-count" name="recurrenceCount" type="number" min="2" max="12" value="2"></div>
+          </div>
+          <p class="field-help">Cada data é validada separadamente. A série inteira só é salva se todos os horários estiverem livres.</p>
+        </div>
+        <p class="field-help" id="appointment-availability-note">Selecione o serviço, a data e o profissional para consultar horários válidos.</p>
+        <section class="smart-suggestions" aria-labelledby="smart-suggestions-title">
+          <div class="smart-suggestions-heading">
+            <div><p class="section-kicker">EFA INTELLIGENCE</p><h3 id="smart-suggestions-title">Sugestões Inteligentes</h3></div>
+            <span class="suggestion-source">Agenda e histórico local</span>
+          </div>
+          <div id="smart-suggestions-list" class="smart-suggestions-list">
+            <p class="field-help">Escolha serviço, data e profissional para ver sugestões.</p>
+          </div>
+        </section>
+        <div class="form-error hidden" id="appointment-error" role="alert"></div>
+        <div class="dialog-actions">
+          <button class="button button-secondary" type="button" data-close-dialog>Voltar</button>
+          <button class="button button-primary" type="submit">Salvar agendamento</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="app-dialog" id="service-dialog" aria-labelledby="service-dialog-title">
+      <form id="service-form" method="dialog">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">CARDÁPIO DE SERVIÇOS</p><h2 id="service-dialog-title">Novo serviço</h2></div>
+          <button class="icon-button dialog-close" type="button" data-close-dialog aria-label="Fechar">×</button>
+        </div>
+        <input id="service-id" type="hidden">
+        <label class="field-label" for="service-name">Nome</label>
+        <input class="text-input" id="service-name" maxlength="60" required>
+        <label class="field-label" for="service-description">Descrição</label>
+        <textarea class="text-input text-area" id="service-description" maxlength="240" rows="3" required></textarea>
+        <div class="form-row">
+          <div><label class="field-label" for="service-price">Preço (R$)</label><input class="text-input" id="service-price" type="number" min="0" max="99999" step="0.01" required></div>
+          <div><label class="field-label" for="service-duration">Duração do Serviço</label><input class="text-input" id="service-duration" type="time" min="00:05" max="08:00" step="300" required aria-describedby="service-duration-help"><small class="field-help" id="service-duration-help">Informe horas e minutos. Ex.: 00:30 ou 01:15.</small></div>
+        </div>
+        <label class="field-label" for="service-staff">Profissionais habilitados <span class="optional">(opcional)</span></label>
+        <select class="text-input service-staff-select" id="service-staff" multiple size="4" aria-describedby="service-staff-help"></select>
+        <small class="field-help" id="service-staff-help">Sem seleção, todos os profissionais ativos podem realizar este serviço.</small>
+        <label class="day-toggle"><input id="service-active" type="checkbox" checked><span>Disponível para novos agendamentos</span></label>
+        <div class="form-error hidden" id="service-error" role="alert"></div>
+        <div class="dialog-actions">
+          <button class="button button-secondary" type="button" data-close-dialog>Voltar</button>
+          <button class="button button-primary" type="submit">Salvar serviço</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="app-dialog" id="commission-payment-dialog" aria-labelledby="commission-payment-title">
+      <form id="commission-payment-form" method="dialog">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">FECHAMENTO DE COMISSÕES</p><h2 id="commission-payment-title">Registrar pagamento</h2></div>
+          <button class="icon-button dialog-close" type="button" data-close-dialog aria-label="Fechar">×</button>
+        </div>
+        <input id="commission-payment-staff-id" type="hidden">
+        <p class="subheading" id="commission-payment-summary"></p>
+        <label class="field-label" for="commission-payment-date">Data de pagamento</label>
+        <input class="text-input" id="commission-payment-date" type="date" required>
+        <label class="field-label" for="commission-payment-notes">Observações <span class="optional">(opcional)</span></label>
+        <textarea class="text-input text-area" id="commission-payment-notes" maxlength="240" rows="3" placeholder="Referência ou observação do pagamento"></textarea>
+        <div class="dialog-actions">
+          <button class="button button-secondary" type="button" data-close-dialog>Voltar</button>
+          <button class="button button-primary" type="submit">Confirmar pagamento</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
