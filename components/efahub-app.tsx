@@ -384,7 +384,7 @@ function ModuleCards({ view, onToast }: { view: ViewId; onToast: (message: strin
     audit: [["Eventos de hoje", "8.490 registros", Activity], ["Acessos suspeitos", "2 para revisão", ShieldCheck], ["Última sincronização", "Há 4 minutos", Clock3]]
   };
   const cards = entries[view] ?? [];
-  return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{cards.map(([title, detail, Icon]) => <button key={title} onClick={() => onToast(`${title}: painel demonstrativo. Os dados reais dependem da integração do backend.`)} type="button" className="rounded-2xl border border-[#e8e9e6] bg-white p-5 text-left shadow-soft transition hover:-translate-y-0.5 hover:border-[#d3c4b4]"><span className="metric-icon"><Icon size={17} /></span><h2 className="mt-4 font-bold">{title}</h2><p className="mt-1 text-sm text-muted">{detail}</p><span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[var(--accent)]">Abrir módulo <ArrowRight size={13} /></span></button>)}</div>;
+  return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{cards.map(([title, detail, Icon]) => <button key={title} onClick={() => onToast(`${title}: painel demonstrativo. Os dados reais dependem da integração do backend.`)} type="button" className="module-card rounded-2xl border border-[#e8e9e6] bg-white p-5 text-left shadow-soft transition hover:-translate-y-0.5 hover:border-[#d3c4b4]"><span className="metric-icon"><Icon size={17} /></span><h2 className="mt-4 font-bold">{title}</h2><p className="mt-1 text-sm text-muted">{detail}</p><span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[var(--accent)]">Abrir módulo <ArrowRight size={13} /></span></button>)}</div>;
 }
 
 type DemoDateStatus = "available" | "full" | "blocked" | "past";

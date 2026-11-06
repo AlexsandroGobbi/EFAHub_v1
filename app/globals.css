@@ -40,6 +40,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .workspace[data-theme="dark"] { color-scheme: dark; --accent-soft: #30263f; --canvas: #0b0b0d; --surface: #171719; --surface-muted: #242428; --text: #f8fafc; --text-muted: #cbd5e1; --border: #323236; background: var(--canvas); color: var(--text); }
 .workspace[data-theme="dark"][data-role="client"] { --canvas: #0b0b0d; }
 .workspace[data-theme="dark"] .bg-white:not(button) { background-color: var(--surface) !important; color: var(--text); }
+.workspace[data-theme="dark"] .module-card { background-color: var(--surface) !important; border-color: var(--border); color: var(--text); }
 .workspace[data-theme="dark"] [class*="bg-[#f"] { background-color: var(--surface-muted) !important; color: var(--text); }
 .workspace[data-theme="dark"] .text-ink { color: var(--text) !important; }
 .workspace[data-theme="dark"] .text-muted { color: var(--text-muted) !important; }
