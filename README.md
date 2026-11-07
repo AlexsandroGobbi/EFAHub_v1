@@ -30,6 +30,8 @@ Abra `http://localhost:3000`. Os comandos de build e testes são `npm run build`
 
 O seletor de papel é somente uma prévia de interface. Não há login, autenticação, autorização RBAC, banco conectado, sincronização, pagamentos ou envio de notificações. Os registros e indicadores exibidos são fictícios; não use dados reais de clientes. Nenhuma operação privilegiada pode ser considerada protegida até que autorização e isolamento sejam verificados no backend.
 
+**Regra de pagamento:** clientes pagam pelos serviços diretamente no estabelecimento. O EFAHub não deve oferecer checkout, Pix/cartão, cobrança, transferência ou estorno desses serviços. A única cobrança prevista dentro do produto é a assinatura que a empresa paga ao EFAHub. Um registro manual de caixa, se usado pela empresa, apenas anota um pagamento que já ocorreu presencialmente; não movimenta dinheiro.
+
 O sitemap e a matriz RBAC são propostas de produto. A migração Supabase atual ainda não define papéis de cliente ou administrador da plataforma e precisa ser ampliada e testada. Regras de disponibilidade, conflitos, estados de atendimento, comissões, pagamentos e auditoria precisam ser executadas e validadas no servidor. Não exponha uma `service_role` no navegador.
 
 ## Arquitetura planejada

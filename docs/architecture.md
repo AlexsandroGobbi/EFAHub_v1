@@ -6,6 +6,7 @@
 - Cada papel tem uma área, navegação, tarefas e indicadores próprios.
 - A aplicação web e os clientes mobile usam a mesma API; regras de disponibilidade, autorização e valores são validadas no servidor.
 - O protótipo atual usa dados fictícios e não implementa autenticação, RBAC efetivo, pagamentos, sincronização ou envio de notificações.
+- O cliente paga pelo serviço diretamente no estabelecimento. O EFAHub não processa pagamentos, Pix, cartão, sinal, estorno ou repasse dos serviços; o único pagamento previsto no app é a assinatura da empresa ao EFAHub. Um eventual registro de caixa da empresa serve apenas para anotar um recebimento feito fora do app.
 - A experiência deve informar estados vazios, carregamento, erro, sucesso e indisponibilidade, sem inventar integrações ou métricas.
 - Dados de saúde e outros dados pessoais sensíveis não são necessários para os fluxos deste MVP.
 
@@ -22,7 +23,7 @@ Navegação inferior no mobile e cabeçalho no desktop:
 5. `/cliente/agendar/profissional` — seleção do profissional.
 6. `/cliente/agendar/data` — calendário e disponibilidade por dia.
 7. `/cliente/agendar/horario` — horários livres por faixa do dia.
-8. `/cliente/agendar/confirmacao` — resumo e confirmação da reserva.
+8. `/cliente/agendar/confirmacao` — resumo e confirmação da reserva, com aviso de que o serviço será pago diretamente no estabelecimento.
 9. `/cliente/agendamentos` — abas de próximos, concluídos e cancelados.
 10. `/cliente/perfil` — dados pessoais, preferências, privacidade e suporte.
 
@@ -37,7 +38,7 @@ Navegação própria, priorizando a rotina individual:
 13. `/profissional/agenda/semana` — calendário semanal, jornadas e bloqueios.
 14. `/profissional/atendimentos/[id]` — cliente, serviço, observações e transições permitidas.
 15. `/profissional/clientes` — busca e histórico permitido ao profissional.
-16. `/profissional/comissoes` — valores por período, lançamentos e pagamentos.
+16. `/profissional/comissoes` — valores por período e situação das comissões.
 17. `/profissional/perfil` — especialidades, dados profissionais, jornada e folgas.
 
 Jornada: início → atendimento → consulta de informações necessárias → iniciar/concluir ou solicitar alteração. O profissional só acessa os dados de clientes vinculados ao seu negócio e às suas permissões.
@@ -46,14 +47,14 @@ Jornada: início → atendimento → consulta de informações necessárias → 
 
 Navegação operacional independente:
 
-18. `/funcionario/inicio` — fila, check-ins, agenda do dia e pendências de pagamento.
+18. `/funcionario/inicio` — fila, check-ins, agenda do dia e serviços cujo pagamento presencial ainda precisa ser registrado.
 19. `/funcionario/agenda` — visão geral por profissional, sala e data.
 20. `/funcionario/agendamentos/novo` — criação assistida de reserva.
 21. `/funcionario/clientes/novo` — cadastro mínimo de cliente, com validação e consentimento aplicável.
 22. `/funcionario/check-in` — clientes do dia, chegada, atraso e falta.
-23. `/funcionario/caixa` — registro de recebimentos e comprovantes.
+23. `/funcionario/caixa` — anotação administrativa de recebimentos feitos no estabelecimento; não cobra nem processa pagamentos.
 
-Jornada: localizar ou cadastrar cliente → selecionar serviço e profissional → consultar disponibilidade do servidor → confirmar reserva → registrar chegada e recebimento conforme permissão.
+Jornada: localizar ou cadastrar cliente → selecionar serviço e profissional → consultar disponibilidade do servidor → confirmar reserva → registrar chegada → se necessário, anotar no caixa o pagamento que já foi feito no estabelecimento.
 
 ### Administrador da empresa — `/empresa`
 
@@ -64,13 +65,13 @@ Navegação de gestão da própria organização:
 26. `/empresa/clientes` — CRM, busca, frequência e segmentos com base em dados disponíveis.
 27. `/empresa/profissionais` — equipe, metas, permissões e produção.
 28. `/empresa/servicos` — serviços, preço, duração, categoria e profissionais habilitados.
-29. `/empresa/financeiro` — receitas registradas, despesas, comissões e fluxo de caixa.
+29. `/empresa/financeiro` — receitas anotadas após recebimento no estabelecimento, despesas, comissões e fluxo de caixa; sem checkout ou processamento de pagamentos de serviços.
 30. `/empresa/relatorios` — relatórios por intervalo, serviço, profissional e cliente.
 31. `/empresa/marketing` — campanhas e fidelidade; comunicações dependem de consentimento e integração.
 32. `/empresa/estoque` — produtos, entradas, saídas e alertas.
 33. `/empresa/configuracoes` — dados da empresa, unidades, horários, integrações e assinatura.
 
-Jornada: visão executiva → localizar oportunidade → agir no módulo operacional → acompanhar resultado mensurável. A receita de serviços concluídos e o dinheiro recebido são indicadores distintos.
+Jornada: visão executiva → localizar oportunidade → agir no módulo operacional → acompanhar resultado mensurável. A receita prevista dos serviços e os valores anotados como recebidos presencialmente são indicadores distintos; o dinheiro não passa pelo EFAHub.
 
 ### Administrador EFAHub — `/plataforma`
 
@@ -79,11 +80,11 @@ Console de plataforma, sem assumir propriedade dos dados operacionais do estabel
 34. `/plataforma/inicio` — empresas ativas, MRR/ARR, churn e volume agregado.
 35. `/plataforma/empresas` — ativação, suspensão, bloqueio e alteração de plano, com motivo e auditoria.
 36. `/plataforma/assinaturas` — planos, ciclos, estados e histórico.
-37. `/plataforma/financeiro` — cobranças, recebimentos e inadimplência da plataforma.
+37. `/plataforma/financeiro` — cobranças das assinaturas do EFAHub, recebimentos da plataforma e inadimplência dessas assinaturas; nunca pagamentos dos serviços dos estabelecimentos.
 38. `/plataforma/suporte` — tickets, prioridade e SLA.
 39. `/plataforma/auditoria` — eventos administrativos, acessos e alterações.
 
-Jornada: indicador agregado → conta ou incidente → ação privilegiada com confirmação, justificativa, autorização no servidor e registro de auditoria.
+Jornada: indicador agregado → conta ou incidente → ação privilegiada com confirmação, justificativa, autorização no servidor e registro de auditoria. As cobranças financeiras deste perfil são somente referentes ao uso do EFAHub pelas empresas.
 
 ## 3. Arquitetura de rotas web
 
@@ -157,7 +158,7 @@ Neste protótipo, as URLs são resolvidas por `app/[area]/[[...segments]]/page.t
 20. **Novo agendamento:** busca/cadastro de cliente; seleção serviço/profissional; consulta dos slots ao servidor; revisão final; salvar, mostrar conflito e permitir nova consulta.
 21. **Cadastro de cliente:** nome e contato mínimos, formato validado, consentimento e finalidade; indicar duplicidade potencial sem revelar dados a quem não tenha acesso.
 22. **Check-in:** lista cronológica do dia; ações chegou, atrasado e falta; confirmação e trilha de auditoria; impedir estados inválidos.
-23. **Caixa:** atendimentos a receber; valor, forma (PIX/cartão/dinheiro), referência e confirmação; comprovante após registro; sem afirmar integração de pagamento quando for lançamento manual.
+23. **Caixa:** indicar serviços cujo pagamento será feito no estabelecimento e permitir, se a empresa quiser, anotar o recebimento depois que ocorreu; forma (PIX/cartão/dinheiro), referência e comprovante são somente registros manuais. Não oferecer checkout, cobrança, captura, transferência ou estorno pelo app.
 
 ### Administrador da empresa
 
@@ -166,7 +167,7 @@ Neste protótipo, as URLs são resolvidas por `app/[area]/[[...segments]]/page.t
 26. **CRM:** pesquisa, filtros e segmentos; visitas, última visita e preferências; aniversário/inatividade apenas com dados e base apropriados; evitar exposição excessiva de PII.
 27. **Profissionais:** lista e status; perfil, serviços, agenda, metas e produção; permissões por função; convite e alteração de acesso com auditoria.
 28. **Serviços:** catálogo ativo/inativo; formulário validado para preço, categoria, duração e profissional; prévia pública; histórico de alterações relevantes.
-29. **Financeiro:** entradas, despesas, caixa, recebimentos e comissões separados; filtros e conciliação; exportação; erros de sincronização e pendências visíveis.
+29. **Financeiro:** entradas anotadas após recebimento no estabelecimento, despesas e comissões separados; filtros, relatórios e exportação. Não processar o pagamento do serviço nem afirmar que o dinheiro passou pelo EFAHub.
 30. **Relatórios:** período, unidade e dimensões; receita, serviços, profissionais e clientes; definição do indicador, origem, filtros aplicados e exportação autorizada.
 31. **Marketing:** campanhas, cupons, cashback e fidelidade; audiência e consentimento antes do envio; prévia, agendamento, estado e resultados; não disparar comunicações no protótipo.
 32. **Estoque:** catálogo, saldo, custo, entradas/saídas, inventário e alertas; confirmação para ajustes; histórico por operador.
@@ -177,7 +178,7 @@ Neste protótipo, as URLs são resolvidas por `app/[area]/[[...segments]]/page.t
 34. **Dashboard global:** MRR/ARR com fórmulas e período; churn, empresas e agendamentos agregados; tickets e alertas; nenhum dado individual do cliente final por padrão.
 35. **Empresas:** pesquisa, filtros e detalhes; ativar/suspender/bloquear/alterar plano; motivo obrigatório, revisão de impacto e auditoria.
 36. **Assinaturas:** planos Basic/Pro/Enterprise; ciclo, status, vigência, cobrança e histórico; mudanças protegidas contra ação acidental.
-37. **Financeiro da plataforma:** cobranças, recebimentos, inadimplência e reconciliação; separar receita do SaaS das vendas dos estabelecimentos; moeda, período e origem visíveis.
+37. **Financeiro da plataforma:** cobranças e recebimentos apenas das assinaturas do EFAHub, inadimplência e conciliação dessas cobranças; nunca incluir pagamentos dos serviços dos estabelecimentos. Moeda, período e origem visíveis.
 38. **Suporte:** fila, severidade, SLA, atribuição, notas e histórico; limitar dados sensíveis nos tickets; estados de resposta claros.
 39. **Auditoria:** filtros por ator, empresa, ação e período; trilha imutável no backend, paginação e exportação privilegiada; nunca expor tokens/segredos.
 
@@ -240,7 +241,8 @@ A migração Supabase atual define `owner`, `manager`, `barber` e `receptionist`
 - Provedor de autenticação, recuperação de conta, MFA e fluxo de convites.
 - Separação entre identidade de cliente e associação de cliente por negócio.
 - Entitlements/planos e limites comerciais; regras de bloqueio e contestação.
-- Política para cancelamentos, sinal, reembolso, pagamentos e conciliação.
+- Regras para cancelamento de agendamentos e para anotar recebimentos realizados diretamente no estabelecimento.
+- Provedor, ciclos, renovação, atraso, cancelamento e conciliação das assinaturas pagas pelas empresas ao EFAHub.
 - Consentimento e retenção para campanhas, WhatsApp, analytics e preferências.
 - Requisitos fiscais, LGPD, suporte, auditoria, backups e resposta a incidentes.
 - API de disponibilidade e confirmação atômica para impedir dupla reserva.
