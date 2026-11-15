@@ -90,8 +90,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .step-dot { display: grid; flex: 0 0 28px; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: #eeefec; color: #7a7c77; font-size: 12px; font-weight: 700; }
 .step-dot.active { background: var(--accent); color: white; }
 .step-dot.done { background: #e4efe9; color: #217a5b; }
-.calendar-day { display: grid; min-height: 69px; place-items: center; border: 1px solid #e8e9e6; border-radius: 12px; background: white; }
+.calendar-day { display: grid; min-height: 69px; place-items: center; border: 1px solid #e8e9e6; border-radius: 12px; background: white; color: #343630; }
+.calendar-day:disabled { background: #f1f2f0; color: #62665f; opacity: 1; }
 .calendar-day.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.workspace[data-theme="dark"] .calendar-day { border-color: var(--border); background: var(--surface); color: var(--text); }
+.workspace[data-theme="dark"] .calendar-day:disabled { background: var(--surface-muted); color: var(--text-muted); }
+.workspace[data-theme="dark"] .calendar-day.selected { border-color: var(--accent); background: var(--accent-soft); color: #f2bfcb; }
 .slot-button { border: 1px solid #e8e9e6; background: #fff; color: #343630; }
 .slot-button.selected { border-color: var(--accent); background: var(--accent); color: #fff; }
 .slot-button:disabled { cursor: not-allowed; background: #f1f2f0; color: #a7aaa4; text-decoration: line-through; }
