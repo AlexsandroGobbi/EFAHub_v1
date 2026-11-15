@@ -42,6 +42,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .workspace[data-theme="dark"] [class*="text-[#642033"], .workspace[data-theme="dark"] [class*="text-[#7a2438"] { color: #f2bfcb !important; }
 .workspace[data-theme="dark"][data-role="client"] { --canvas: #0b0b0d; }
 .workspace[data-theme="dark"] .bg-white:not(button) { background-color: var(--surface) !important; color: var(--text); }
+.workspace[data-theme="dark"] button.bg-white { background-color: var(--surface) !important; border-color: var(--border); color: var(--text); }
 .workspace[data-theme="dark"] .module-card { background-color: var(--surface) !important; border-color: var(--border); color: var(--text); }
 .workspace[data-theme="dark"] .client-promo-card { background-color: #35151f !important; color: #f8fafc; }
 .workspace[data-theme="dark"] .client-promo-label { color: #f2bfcb !important; }
