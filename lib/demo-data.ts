@@ -4,6 +4,7 @@ export type AppointmentStatus = "Confirmado" | "Aguardando" | "Concluído" | "Ca
 export type Appointment = {
   id: number;
   customer: string;
+  business?: string;
   service: string;
   professional: string;
   date: string;
@@ -11,6 +12,8 @@ export type Appointment = {
   status: AppointmentStatus;
   price: number;
   presenceConfirmed?: boolean;
+  paymentStatus?: "pending" | "received";
+  paymentMethod?: "PIX" | "Cartão" | "Dinheiro";
 };
 
 export type Booking = {
@@ -52,11 +55,11 @@ export function makeInitialAppointments(): Appointment[] {
   const date = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
 
   return [
-    { id: 1, customer: "João Almeida", service: "Corte personalizado", professional: "Marina Costa", date: date(today), time: "09:00", status: "Confirmado", price: 85 },
-    { id: 2, customer: "Beatriz Souza", service: "Coloração", professional: "Rafael Martins", date: date(today), time: "10:30", status: "Aguardando", price: 180 },
-    { id: 3, customer: "Lucas Ferreira", service: "Corte + barba", professional: "Marina Costa", date: date(today), time: "14:00", status: "Confirmado", price: 95 },
-    { id: 4, customer: "Ana Clara Lima", service: "Limpeza de pele", professional: "Camila Rocha", date: date(tomorrow), time: "11:00", status: "Confirmado", price: 160 },
-    { id: 5, customer: "Pedro Nunes", service: "Corte personalizado", professional: "Rafael Martins", date: date(inTwoDays), time: "15:30", status: "Confirmado", price: 85 }
+    { id: 1, customer: "João Almeida", business: "Ateliê Aurora", service: "Corte personalizado", professional: "Marina Costa", date: date(tomorrow), time: "09:00", status: "Confirmado", price: 85 },
+    { id: 2, customer: "Beatriz Souza", business: "Ateliê Aurora", service: "Coloração", professional: "Rafael Martins", date: date(today), time: "10:30", status: "Aguardando", price: 180 },
+    { id: 3, customer: "Lucas Ferreira", business: "Ateliê Aurora", service: "Corte + barba", professional: "Marina Costa", date: date(today), time: "14:00", status: "Confirmado", price: 95 },
+    { id: 4, customer: "Ana Clara Lima", business: "Ateliê Aurora", service: "Limpeza de pele", professional: "Camila Rocha", date: date(tomorrow), time: "11:00", status: "Confirmado", price: 160 },
+    { id: 5, customer: "Pedro Nunes", business: "Ateliê Aurora", service: "Corte personalizado", professional: "Rafael Martins", date: date(inTwoDays), time: "15:30", status: "Confirmado", price: 85 }
   ];
 }
 

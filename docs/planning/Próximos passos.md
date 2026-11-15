@@ -31,6 +31,9 @@ Na prática, isso significa:
 - Atualizada a identidade visual para tons de vinho/bordô e corrigidos contrastes e layouts em diferentes áreas.
 - Reorientada a home do cliente para os serviços da empresa vinculada; adicionados dados de perfil, preferências de comunicação, privacidade e suporte como telas demonstrativas.
 - Simplificado o agendamento para mostrar datas e horários na mesma etapa, com filtros e cupom; adicionados gestão demonstrativa de cupons, confirmação de presença, cancelamento e reagendamento sujeitos às regras configuradas pela empresa.
+- Adaptadas as telas às regras de negócio: cliente limitado aos próprios agendamentos; perfis operacionais podem criar, alterar e cancelar reservas; equipe pode ser convidada/removida; caixa só registra recebimentos depois do atendimento concluído; configurações incluem atrasos, faltas e comissões.
+- Adicionadas telas demonstrativas para ciclo, cancelamento e atraso da assinatura EFAHub e aviso sobre retenção de dados pessoais por até 10 anos.
+- Criado o documento [Regras de negócio](../business-rules.md), com as decisões da Etapa 1 e a lista do que ainda precisa ser feito no backend.
 - Adicionados os temas claro, escuro e automático.
 - Configurada uma versão estática para demonstração no GitHub Pages.
 - Guardado em `legacy/` o protótipo anterior, que não é a aplicação principal.
@@ -76,6 +79,8 @@ Não comece criando mais telas ou aplicativos. Primeiro, construa a base que faz
 
 **Objetivo:** decidir claramente como o sistema deve funcionar antes de programar essas regras.
 
+**Status: concluída.** As respostas foram registradas em [Regras de negócio](../business-rules.md) e já orientam algumas telas demonstrativas. Isso não significa que as regras estejam protegidas ou salvas no servidor.
+
 Anote respostas para perguntas como:
 
 1. Quem pode criar uma empresa?
@@ -89,9 +94,21 @@ Anote respostas para perguntas como:
 9. Quais são as regras de cobrança, renovação, atraso e cancelamento da assinatura do EFAHub?
 10. Quais dados pessoais são realmente necessários e por quanto tempo serão guardados?
 
-Crie uma tabela com uma linha para cada ação e uma coluna para cada papel: cliente, profissional, funcionário, administrador da empresa e administrador EFAHub. Marque **pode** ou **não pode**, e explique qualquer exceção.
+As decisões registradas são, em resumo:
 
-**Pronto quando:** as regras não dependem de interpretação e a equipe consegue explicar quem pode fazer cada ação.
+- O proprietário que contrata o EFAHub cadastra a empresa.
+- O administrador da empresa e o administrador EFAHub podem convidar ou remover funcionários.
+- O cliente cria, altera e cancela apenas os próprios agendamentos, respeitando a antecedência definida pela empresa.
+- Profissional, recepcionista, administrador da empresa e administrador EFAHub podem criar, alterar e cancelar agendamentos da empresa, de acordo com suas permissões.
+- A empresa define os prazos de cancelamento/remarcação, o check-in e como agir quando um profissional se atrasa ou falta.
+- O administrador da empresa e o administrador EFAHub definem e corrigem as regras de comissão; elas podem variar por serviço, profissional, tipo/valor e forma de pagamento.
+- O serviço é pago presencialmente. O caixa apenas anota que a empresa recebeu depois que o atendimento foi concluído.
+- A assinatura EFAHub é recorrente; pode haver retentativas e avisos por atraso. O cancelamento mantém o acesso até o fim do período pago e impede novas cobranças.
+- Dados pessoais devem ser limitados ao necessário e poderão ser mantidos por até 10 anos, com revisão jurídica e anonimização ou exclusão depois do prazo, conforme a política aplicável.
+
+Leia o documento completo antes de alterar permissões ou criar novas telas. A matriz detalhada de papéis está na [arquitetura](../architecture.md).
+
+**Concluída quando:** as regras principais foram escritas. A equipe ainda precisa validar a matriz de acesso e a revisão jurídica da retenção antes da produção.
 
 ### Etapa 2 — Planejar dados e acesso
 
@@ -112,7 +129,7 @@ Liste as informações principais:
 
 Cada informação pertencente a um negócio precisa estar associada à empresa certa. A identificação da empresa não pode ser confiada apenas ao que o navegador envia: o servidor e o banco precisam conferir o acesso.
 
-O projeto já contém uma migração inicial em `supabase/migrations/202611030001_mvp_core.sql`. Ela é um ponto de partida para revisão, não prova de que o banco está pronto ou seguro. Antes de usá-la, confirme que as regras cobrem todos os papéis planejados, incluindo cliente e administrador EFAHub.
+O projeto já contém uma migração inicial em `supabase/migrations/202611030001_mvp_core.sql`. Ela é um ponto de partida para revisão, não prova de que o banco está pronto ou seguro. A migração atual não inclui todos os papéis e ainda restringe algumas operações do profissional ao próprio `staff_id`; ela precisa ser adaptada com segurança para corresponder às novas regras, incluindo cliente e administrador EFAHub.
 
 **Pronto quando:** o modelo de dados está documentado e os testes provam que uma conta da Empresa A não consegue ler nem alterar informações da Empresa B.
 
@@ -161,11 +178,13 @@ O primeiro comando procura problemas de código; o segundo executa os testes exi
 Passos:
 
 1. Criar e configurar o projeto de backend/Supabase em um ambiente de desenvolvimento.
-2. Implementar cadastro, login, saída e recuperação de senha.
-3. Associar cada conta a uma empresa e a um papel.
-4. Fazer o servidor conferir a permissão em toda ação protegida.
-5. Configurar as políticas RLS no banco para restringir os registros.
-6. Testar acessos permitidos e negados para cada papel e empresa.
+2. Implementar cadastro, login, saída e recuperação de acesso da equipe.
+3. Configurar OTP por SMS para provar a titularidade do telefone do cliente sem exigir senha.
+4. Associar funcionários à empresa e ao papel; manter o administrador EFAHub em uma lista global separada, nunca como membro comum de uma empresa.
+5. Fazer o servidor conferir a permissão em toda ação protegida e aplicar regras de prazo do cliente.
+6. Configurar políticas RLS e funções seguras no banco para cada tabela e operação.
+7. Antes de aplicar uma nova migração, verificar se a migração atual já foi executada no ambiente; não apagar nem reescrever uma migração aplicada.
+8. Testar acessos permitidos e negados para cada papel e empresa, inclusive acesso global do administrador EFAHub.
 
 Esconder um botão na interface não protege os dados. A verificação precisa acontecer no servidor e no banco. Nunca coloque uma chave secreta de administrador, como `service_role`, no código enviado ao navegador.
 
@@ -260,11 +279,15 @@ Não registre senhas, tokens ou dados pessoais desnecessários nos logs. Registr
 
 Uma sequência curta e prática:
 
-1. **Agora:** revisar as regras de negócio e completar a matriz de permissões.
-2. **Em seguida:** revisar o esquema Supabase e planejar testes de isolamento entre empresas.
-3. **Depois:** implementar login e permissões no backend.
-4. **Então:** conectar e testar o fluxo de agendamento de ponta a ponta.
-5. **Só depois:** conectar o financeiro administrativo da empresa, as cobranças de assinatura do EFAHub, mensagens, aplicativos mobile e outras funcionalidades. Não implementar pagamento dos serviços dentro do app.
+1. **Concluído:** escrever as regras de negócio. Leia [Regras de negócio](../business-rules.md).
+2. **Agora:** revisar e testar no Supabase a migração incremental [202611150001_rbac_foundation.sql](../../supabase/migrations/202611150001_rbac_foundation.sql). Primeiro confirme se a migração anterior já foi aplicada; nunca apague nem altere uma migração que já rodou. A nova migração é apenas uma base e não implementa toda a matriz.
+3. **Em seguida:** configurar Supabase Auth/OTP, login da equipe e autorização no servidor; o seletor de papel demonstrativo não oferece segurança.
+4. **Então:** implementar e testar as permissões completas de cada papel e o isolamento entre empresas, inclusive ações do administrador global.
+5. **Depois:** conectar agenda, equipe, clientes, serviços/cupons, comissões e caixa presencial às funções seguras do banco.
+6. **Também:** implementar planos/assinaturas do EFAHub, fluxo de cobrança da plataforma, notificações e auditoria persistente.
+7. **Por último:** validar retenção/anonimização, suporte, backups e preparar um piloto com dados controlados.
+
+O cliente continua pagando o serviço diretamente no estabelecimento. Não implementar pagamento dos serviços dentro do app.
 
 Não comece pelos aplicativos mobile ou pela automação de marketing. Sem um backend seguro e regras definidas, esses canais apenas repetiriam os mesmos problemas em mais lugares.
 
@@ -293,6 +316,7 @@ O deploy do protótipo não transforma a aplicação em um sistema de produção
 - [README do projeto](../../README.md): como abrir o projeto e quais são suas limitações.
 - [Guia de publicação](../deployment.md): como funciona a demonstração no GitHub Pages.
 - [Arquitetura e mapa de navegação](../architecture.md): páginas, fluxos e papéis planejados.
+- [Regras de negócio](../business-rules.md): decisões da Etapa 1 e pendências para torná-las reais.
 - [Relatório de auditoria](../audit-report.md): problemas e melhorias identificados.
 
 ## 9. Regra final

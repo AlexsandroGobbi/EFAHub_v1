@@ -36,7 +36,7 @@ import {
   Wallet,
   X
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -59,6 +59,10 @@ import { nextThemePreference, normalizeThemePreference, resolveThemePreference, 
 import type { ResolvedTheme, ThemePreference } from "@/lib/theme";
 
 const FAVORITES_STORAGE_KEY = "efahub-favorite-businesses-v1";
+const APPOINTMENTS_SESSION_KEY = "efahub-demo-appointments-v1";
+const COUPONS_SESSION_KEY = "efahub-demo-coupons-v1";
+const BOOKING_RULES_SESSION_KEY = "efahub-demo-booking-rules-v1";
+const TEAM_SESSION_PREFIX = "efahub-demo-team-v1:";
 
 export type ViewId =
   | "home" | "search" | "business" | "companyServices" | "appointments" | "favorites" | "notifications" | "profile"
@@ -69,13 +73,78 @@ export type ViewId =
 
 type NavEntry = { id: ViewId; label: string; icon: LucideIcon };
 type BookingOptions = { businessId?: string; serviceId?: string; step?: number };
-type BookingRules = { checkInEnabled: boolean; checkInLeadHours: number; cancelLeadHours: number; rescheduleLeadHours: number };
+type CashMethod = "PIX" | "Cartão" | "Dinheiro";
+type CommissionRule = { type: "percent" | "fixed"; value: number; release: "afterCompletion" | "afterPayment"; methods: CashMethod[] };
+type BookingRules = {
+  checkInEnabled: boolean;
+  checkInLeadHours: number;
+  cancelLeadHours: number;
+  rescheduleLeadHours: number;
+  lateThresholdMinutes: number;
+  lateProfessionalAction: "notifyClient" | "reschedule";
+  absentProfessionalAction: "notifyClient" | "automaticReschedule" | "contactClient";
+  commissionRules: Record<string, CommissionRule>;
+};
 type DemoCoupon = { id: number; code: string; kind: "percent" | "fixed"; value: number; expiry: string; maxUses: number; usedCount: number; service: string; campaign: string };
 const initialDemoCoupons: DemoCoupon[] = [
   { id: 1, code: "EFA10", kind: "percent", value: 10, expiry: "2027-12-31", maxUses: 100, usedCount: 0, service: "Todos os serviços", campaign: "Boas-vindas" },
   { id: 2, code: "BEMVINDO15", kind: "fixed", value: 15, expiry: "2027-06-30", maxUses: 50, usedCount: 0, service: "Corte personalizado", campaign: "Primeira visita" }
 ];
-type Props = { role: Role; view: ViewId; appointments: Appointment[]; onBook: (options?: BookingOptions) => void; onToast: (message: string) => void; onComplete: (id: number) => void; onQuickCreate: (appointment: Omit<Appointment, "id">) => void; onNavigate: (view: ViewId) => void; onViewBusiness: (businessId: string, servicesOnly?: boolean) => void; businessId: string; favoriteBusinessIds: string[]; onToggleFavorite: (businessId: string) => void; themePreference: ThemePreference; resolvedTheme: ResolvedTheme; onThemeChange: (preference: ThemePreference) => void; onCancelAppointment: (id: number) => void; onConfirmPresence: (id: number) => void; onRescheduleAppointment: (appointment: Appointment) => void; bookingRules: BookingRules; onBookingRulesChange: (rules: BookingRules) => void; coupons: DemoCoupon[]; onCouponsChange: (coupons: DemoCoupon[]) => void };
+const appointmentStateSchema = z.array(z.object({
+  id: z.number(),
+  customer: z.string(),
+  business: z.string().optional(),
+  service: z.string(),
+  professional: z.string(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+  status: z.enum(["Confirmado", "Aguardando", "Concluído", "Cancelado"]),
+  price: z.number().nonnegative(),
+  presenceConfirmed: z.boolean().optional(),
+  paymentStatus: z.enum(["pending", "received"]).optional(),
+  paymentMethod: z.enum(["PIX", "Cartão", "Dinheiro"]).optional()
+}));
+const couponStateSchema = z.array(z.object({
+  id: z.number(),
+  code: z.string(),
+  kind: z.enum(["percent", "fixed"]),
+  value: z.number().nonnegative(),
+  expiry: z.string(),
+  maxUses: z.number().int().positive(),
+  usedCount: z.number().int().nonnegative(),
+  service: z.string(),
+  campaign: z.string()
+}));
+const commissionRuleSchema = z.object({
+  type: z.enum(["percent", "fixed"]),
+  value: z.number().nonnegative(),
+  release: z.enum(["afterCompletion", "afterPayment"]),
+  methods: z.array(z.enum(["PIX", "Cartão", "Dinheiro"])).min(1)
+});
+const bookingRulesStateSchema = z.object({
+  checkInEnabled: z.boolean(),
+  checkInLeadHours: z.number().min(0).max(168),
+  cancelLeadHours: z.number().min(0).max(168),
+  rescheduleLeadHours: z.number().min(0).max(168),
+  lateThresholdMinutes: z.number().int().min(0).max(180),
+  lateProfessionalAction: z.enum(["notifyClient", "reschedule"]),
+  absentProfessionalAction: z.enum(["notifyClient", "automaticReschedule", "contactClient"]),
+  commissionRules: z.record(z.string(), commissionRuleSchema)
+});
+const teamStateSchema = z.array(z.object({
+  id: z.number(),
+  email: z.string().email(),
+  name: z.string(),
+  role: z.enum(["Recepcionista", "Profissional"]),
+  status: z.enum(["Ativo", "Convite pendente"])
+}));
+const subscriptionStateSchema = z.object({
+  cycle: z.string(),
+  cancelAtEnd: z.boolean(),
+  access: z.enum(["Ativo", "Parcialmente limitado", "Suspenso"]),
+  retryCount: z.number().int().nonnegative()
+});
+type Props = { role: Role; view: ViewId; appointments: Appointment[]; onBook: (options?: BookingOptions) => void; onToast: (message: string) => void; onComplete: (id: number) => void; onMarkPayment: (id: number, method: CashMethod) => void; onQuickCreate: (appointment: Omit<Appointment, "id">) => void; onNavigate: (view: ViewId) => void; onViewBusiness: (businessId: string, servicesOnly?: boolean) => void; businessId: string; favoriteBusinessIds: string[]; onToggleFavorite: (businessId: string) => void; themePreference: ThemePreference; resolvedTheme: ResolvedTheme; onThemeChange: (preference: ThemePreference) => void; onCancelAppointment: (id: number) => void; onConfirmPresence: (id: number) => void; onRescheduleAppointment: (appointment: Appointment) => void; bookingRules: BookingRules; onBookingRulesChange: (rules: BookingRules) => void; coupons: DemoCoupon[]; onCouponsChange: (coupons: DemoCoupon[]) => void };
 const bookingContactSchema = z.object({
   customer: z.string().trim().min(2, "Informe seu nome.").max(80, "Use até 80 caracteres."),
   phone: z.string().max(20).refine((value) => !value || /^\(\d{2}\) 9\d{4}-\d{4}$/.test(value), "Use o formato (11) 99999-9999.")
@@ -183,18 +252,21 @@ function ThemeCycleButton({ preference, onChange }: { preference: ThemePreferenc
   return <button type="button" onClick={() => onChange(next)} aria-label={`Tema ${labels[preference]}. Alternar para ${labels[next]}`} title={`Tema ${labels[preference]}`} className="grid size-9 shrink-0 place-items-center rounded-lg border border-[#e8e9e6] text-[var(--accent)] transition-colors hover:bg-[var(--accent-soft)]"><Icon size={17} /></button>;
 }
 
-function AppointmentList({ items, showActions = false, onComplete, onToast }: { items: Appointment[]; showActions?: boolean; onComplete?: (id: number) => void; onToast: (message: string) => void }) {
+function AppointmentList({ items, showActions = false, onComplete, onCancel, onReschedule, onToast }: { items: Appointment[]; showActions?: boolean; onComplete?: (id: number) => void; onCancel?: (id: number) => void; onReschedule?: (appointment: Appointment) => void; onToast: (message: string) => void }) {
   if (!items.length) return <div className="rounded-xl border border-dashed border-[#dfe1dc] px-5 py-10 text-center text-sm text-muted">Nenhum agendamento neste período.</div>;
   return (
     <div className="divide-y divide-[#eff0ed]">
-      {items.map((item) => (
+      {items.map((item) => {
+        const canComplete = new Date(`${item.date}T${item.time}:00`).getTime() <= Date.now();
+        return (
         <div className="flex flex-wrap items-center gap-4 py-4 first:pt-0 last:pb-0" key={item.id}>
           <div className="min-w-[66px] rounded-xl bg-[#f4f4f1] px-3 py-2 text-center"><span className="block text-xs text-muted">{formatDate(item.date)}</span><strong className="mt-1 block text-sm">{item.time}</strong></div>
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.customer}</p><p className="mt-1 text-xs text-muted">{item.service} <span className="px-1">·</span> {item.professional}</p></div>
           <div className="ml-auto flex items-center gap-3"><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${item.status === "Concluído" ? "bg-[#e7f2eb] text-[#217a5b]" : item.status === "Aguardando" ? "bg-[#fff3df] text-[#8b6221]" : "bg-[#eef0f3] text-[#536170]"}`}>{item.status}</span><span className="hidden text-sm font-semibold sm:block">{formatCurrency(item.price)}</span></div>
-          {showActions && <div className="flex w-full justify-end gap-2 sm:w-auto"><button type="button" className="rounded-lg border border-[#e4e5e1] px-3 py-2 text-xs font-semibold hover:bg-[#f7f7f5]" onClick={() => onToast(`Detalhes de ${item.customer}`)}>Ver detalhes</button>{item.status !== "Concluído" && <button type="button" className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90" onClick={() => onComplete?.(item.id)}>Finalizar</button>}</div>}
+          {showActions && <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto"><button type="button" className="rounded-lg border border-[#e4e5e1] px-3 py-2 text-xs font-semibold hover:bg-[#f7f7f5]" onClick={() => onToast(`Detalhes de ${item.customer}`)}>Ver detalhes</button>{item.status !== "Concluído" && item.status !== "Cancelado" && <><button type="button" className="rounded-lg border border-[#e4e5e1] px-3 py-2 text-xs font-semibold" onClick={() => onReschedule?.(item)}>Alterar</button><button type="button" className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700" onClick={() => onCancel?.(item.id)}>Cancelar</button><button type="button" disabled={!canComplete} title={canComplete ? "Finalizar atendimento" : "O atendimento só pode ser finalizado no horário marcado"} className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => onComplete?.(item.id)}>Finalizar</button></>}</div>}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -219,7 +291,7 @@ function BusinessCards({ onBook, onViewBusiness, favoriteBusinessIds, onToggleFa
 }
 
 function ClientHome({ appointments, onBook, businessId }: Props) {
-  const next = appointments.find((appointment) => appointment.status !== "Concluído" && appointment.status !== "Cancelado");
+  const next = appointments.find((appointment) => appointment.customer === "João Almeida" && appointment.status !== "Concluído" && appointment.status !== "Cancelado");
   const business = businesses.find((item) => item.id === businessId) ?? businesses[0];
   return (
     <>
@@ -235,7 +307,7 @@ function ClientHome({ appointments, onBook, businessId }: Props) {
   );
 }
 
-function BusinessDashboard({ appointments, onToast, onComplete, onNavigate }: Props) {
+function BusinessDashboard({ appointments, onToast, onComplete, onCancelAppointment, onRescheduleAppointment, onNavigate }: Props) {
   const total = appointments.filter((item) => item.status === "Concluído").reduce((sum, item) => sum + item.price, 0);
   return (
     <>
@@ -251,26 +323,26 @@ function BusinessDashboard({ appointments, onToast, onComplete, onNavigate }: Pr
         <section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Receita ao longo do tempo" detail="Visão ilustrativa · últimos 7 dias" action="Relatórios" onAction={() => onNavigate("reports")} /><RevenueChart /></section>
         <section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Resumo de desempenho" detail="Metas e indicadores do mês" /><div className="space-y-5"><Progress label="Meta de receita" value="R$ 18.450 de R$ 25.000" percent={74} /><Progress label="Clientes recorrentes" value="68% da base ativa" percent={68} /><Progress label="Ocupação" value="78% da capacidade" percent={78} /><div className="flex items-center justify-between border-t border-[#eee] pt-4 text-sm"><span className="text-muted">Ticket médio</span><strong>R$ 112,50</strong></div></div></section>
       </div>
-      <section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Próximos atendimentos" detail="Agenda da unidade · hoje" action="Abrir agenda" onAction={() => onNavigate("agenda")} /><AppointmentList items={appointments} showActions onComplete={onComplete} onToast={onToast} /></section>
+      <section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Próximos atendimentos" detail="Agenda da unidade · hoje" action="Abrir agenda" onAction={() => onNavigate("agenda")} /><AppointmentList items={appointments} showActions onComplete={onComplete} onCancel={onCancelAppointment} onReschedule={onRescheduleAppointment} onToast={onToast} /></section>
       <div className="mt-6 grid gap-5 md:grid-cols-2"><InsightCard title="Oportunidade de recorrência" text="18 clientes habituais estão próximos do período médio de retorno." label="CRM" /><InsightCard title="Horários com maior procura" text="Quinta-feira, entre 16h e 19h, concentra mais solicitações." label="AGENDA" /></div>
     </>
   );
 }
 
-function ProfessionalDashboard({ appointments, onToast, onComplete, onNavigate }: Props) {
+function ProfessionalDashboard({ appointments, onToast, onComplete, onCancelAppointment, onRescheduleAppointment, onNavigate }: Props) {
   const todayAppointments = appointments.slice(0, 3);
   return (
     <>
       <DemoNotice />
       <div className="mb-7"><p className="text-xs font-bold tracking-[.16em] text-[var(--accent)]">QUINTA-FEIRA · 6 DE NOVEMBRO</p><h1 className="mt-2 text-3xl font-bold tracking-tight">{roleTitles.professional}</h1><p className="mt-2 text-sm text-muted">Aqui está o que importa para o seu dia.</p></div>
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><MetricCard label="Atendimentos hoje" value="6" note="2 concluídos · 4 pela frente" icon={CalendarDays} /><MetricCard label="Receita gerada" value="R$ 680" note="comissões calculadas no demo" icon={Wallet} trend="+8%" /><MetricCard label="Próximo cliente" value="Beatriz" note="Coloração · 10:30" icon={Clock3} /><MetricCard label="Avaliação média" value="4,9" note="últimos atendimentos" icon={Star} trend="+0,2" /></div>
-      <div className="grid gap-5 xl:grid-cols-[1.35fr_.65fr]"><section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Minha agenda" detail="Seus atendimentos de hoje" action="Ver semana" onAction={() => onNavigate("agenda")} /><AppointmentList items={todayAppointments} showActions onComplete={onComplete} onToast={onToast} /></section><section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Resumo de ganhos" detail="Comissões estimadas" /><div className="rounded-xl bg-[#f7f6f2] p-4"><p className="text-xs text-muted">Hoje</p><p className="mt-1 text-2xl font-bold">R$ 204,00</p><p className="mt-1 text-xs text-muted">Semana: R$ 1.090,00</p></div><div className="mt-4 space-y-3"><Progress label="Meta do mês" value="R$ 3.240 de R$ 4.500" percent={72} /><p className="text-xs leading-5 text-muted">Os valores são demonstrativos e não representam pagamentos ou fechamento real de comissão.</p></div><button onClick={() => onNavigate("earnings")} type="button" className="mt-4 w-full rounded-xl border border-[#e5e6e2] py-2.5 text-sm font-semibold">Ver extrato</button></section></div>
+      <div className="grid gap-5 xl:grid-cols-[1.35fr_.65fr]"><section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Minha agenda" detail="Seus atendimentos de hoje" action="Ver semana" onAction={() => onNavigate("agenda")} /><AppointmentList items={todayAppointments} showActions onComplete={onComplete} onCancel={onCancelAppointment} onReschedule={onRescheduleAppointment} onToast={onToast} /></section><section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Resumo de ganhos" detail="Comissões estimadas" /><div className="rounded-xl bg-[#f7f6f2] p-4"><p className="text-xs text-muted">Hoje</p><p className="mt-1 text-2xl font-bold">R$ 204,00</p><p className="mt-1 text-xs text-muted">Semana: R$ 1.090,00</p></div><div className="mt-4 space-y-3"><Progress label="Meta do mês" value="R$ 3.240 de R$ 4.500" percent={72} /><p className="text-xs leading-5 text-muted">Os valores são demonstrativos e não representam pagamentos ou fechamento real de comissão.</p></div><button onClick={() => onNavigate("earnings")} type="button" className="mt-4 w-full rounded-xl border border-[#e5e6e2] py-2.5 text-sm font-semibold">Ver extrato</button></section></div>
       <div className="mt-6 grid gap-5 md:grid-cols-2"><InsightCard title="Cliente em destaque" text="João Almeida prefere horários pela manhã e corte tradicional." label="PERFIL DO CLIENTE" /><InsightCard title="Lembrete de atendimento" text="Confira as observações do próximo cliente antes de iniciar." label="PRÓXIMA AÇÃO" /></div>
     </>
   );
 }
 
-function EmployeeDashboard({ appointments, onToast, onComplete, onNavigate }: Props) {
+function EmployeeDashboard({ appointments, onToast, onComplete, onCancelAppointment, onRescheduleAppointment, onNavigate }: Props) {
   const quickActions: { title: string; detail: string; view: ViewId }[] = [
     { title: "Confirmar chegada", detail: "Registrar check-in do cliente", view: "checkin" },
     { title: "Novo cliente", detail: "Cadastrar contato e preferências", view: "newClient" },
@@ -282,19 +354,19 @@ function EmployeeDashboard({ appointments, onToast, onComplete, onNavigate }: Pr
       <DemoNotice />
       <div className="mb-7"><p className="text-xs font-bold tracking-[.16em] text-[var(--accent)]">RECEPÇÃO · UNIDADE JARDINS</p><h1 className="mt-2 text-3xl font-bold tracking-tight">{roleTitles.employee}</h1><p className="mt-2 text-sm text-muted">Resumo operacional para manter o atendimento fluindo.</p></div>
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><MetricCard label="Aguardando chegada" value="3" note="1 cliente já chegou" icon={Users} /><MetricCard label="Agendamentos hoje" value={`${appointments.length + 12}`} note="em 3 profissionais" icon={CalendarDays} /><MetricCard label="Check-ins" value="8" note="2 nos próximos 30 min" icon={Check} /><MetricCard label="Aguardando pagamento no local" value="R$ 420" note="4 atendimentos" icon={Clock3} /></div>
-      <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]"><section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Fila de atendimento" detail="Acompanhe a chegada dos clientes" action="Abrir agenda" onAction={() => onNavigate("agenda")} /><AppointmentList items={appointments} showActions onComplete={onComplete} onToast={onToast} /></section><section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Ações rápidas" detail="Rotina da recepção" /><div className="grid gap-3">{quickActions.map(({ title, detail, view }) => <button type="button" onClick={() => onNavigate(view)} key={title} className="flex items-center justify-between rounded-xl border border-[#ecece9] p-4 text-left hover:bg-[#fafaf8]"><span><strong className="block text-sm">{title}</strong><span className="mt-1 block text-xs text-muted">{detail}</span></span><ArrowRight size={16} className="text-muted" /></button>)}</div></section></div>
+      <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]"><section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Fila de atendimento" detail="Acompanhe a chegada dos clientes" action="Abrir agenda" onAction={() => onNavigate("agenda")} /><AppointmentList items={appointments} showActions onComplete={onComplete} onCancel={onCancelAppointment} onReschedule={onRescheduleAppointment} onToast={onToast} /></section><section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Ações rápidas" detail="Rotina da recepção" /><div className="grid gap-3">{quickActions.map(({ title, detail, view }) => <button type="button" onClick={() => onNavigate(view)} key={title} className="flex items-center justify-between rounded-xl border border-[#ecece9] p-4 text-left hover:bg-[#fafaf8]"><span><strong className="block text-sm">{title}</strong><span className="mt-1 block text-xs text-muted">{detail}</span></span><ArrowRight size={16} className="text-muted" /></button>)}</div></section></div>
     </>
   );
 }
 
-function PlatformDashboard({ onToast, onNavigate }: Props) {
+function PlatformDashboard({ onToast, onNavigate, appointments, onComplete, onCancelAppointment, onRescheduleAppointment }: Props) {
   return (
     <>
       <DemoNotice />
       <div className="mb-7"><p className="text-xs font-bold tracking-[.16em] text-[var(--accent)]">OPERAÇÃO DA PLATAFORMA</p><h1 className="mt-2 text-3xl font-bold tracking-tight">{roleTitles.platformAdmin}</h1><p className="mt-2 text-sm text-muted">Acompanhe a saúde do ecossistema EFAHub.</p></div>
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><MetricCard label="Empresas ativas" value="1.284" note="em todos os planos" icon={Store} trend="+9,4%" accent /><MetricCard label="MRR" value="R$ 184,6 mil" note="receita recorrente mensal" icon={Wallet} trend="+6,8%" /><MetricCard label="Agendamentos" value="48.291" note="nos últimos 30 dias" icon={CalendarDays} trend="+14,2%" /><MetricCard label="Tickets abertos" value="26" note="4 com prioridade alta" icon={CircleHelp} /></div>
       <div className="mb-6 grid gap-5 xl:grid-cols-[1.2fr_.8fr]"><section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Crescimento da plataforma" detail="MRR ilustrativo · últimos 6 meses" /><RevenueChart /></section><section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Saúde do ecossistema" detail="Indicadores operacionais" /><div className="space-y-5"><Progress label="Empresas com onboarding concluído" value="86% da base" percent={86} /><Progress label="Retenção de empresas" value="94,2% · 30 dias" percent={94} /><Progress label="SLA de suporte" value="91% dentro do prazo" percent={91} /><div className="flex items-center justify-between border-t border-[#eee] pt-4 text-sm"><span className="text-muted">Churn mensal</span><strong>2,4%</strong></div></div></section></div>
-      <section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Empresas para acompanhar" detail="Visão demonstrativa de contas e suporte" action="Abrir empresas" onAction={() => onNavigate("businesses")} /><PlatformBusinessTable onToast={onToast} /></section>
+      <section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Empresas para acompanhar" detail="Visão demonstrativa de contas e suporte" action="Abrir empresas" onAction={() => onNavigate("businesses")} /><PlatformBusinessTable onToast={onToast} appointments={appointments} onComplete={onComplete} onCancelAppointment={onCancelAppointment} onRescheduleAppointment={onRescheduleAppointment} /></section>
     </>
   );
 }
@@ -312,8 +384,9 @@ function InsightCard({ title, text, label }: { title: string; text: string; labe
   return <article className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft"><p className="text-[10px] font-bold tracking-[.14em] text-[var(--accent)]">{label}</p><h3 className="mt-2 font-bold">{title}</h3><p className="mt-2 text-sm leading-6 text-muted">{text}</p></article>;
 }
 
-function PlatformBusinessTable({ onToast }: { onToast: (message: string) => void }) {
-  return <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="text-[10px] tracking-wider text-muted"><tr><th className="pb-3 font-semibold">EMPRESA</th><th className="pb-3 font-semibold">PLANO</th><th className="pb-3 font-semibold">STATUS</th><th className="pb-3 font-semibold">MRR</th><th className="pb-3 font-semibold">AÇÃO</th></tr></thead><tbody className="divide-y divide-[#eee]">{[["Ateliê Aurora", "Pro", "Ativa", "R$ 189"], ["Barbearia Central", "Essencial", "Ativa", "R$ 99"], ["Casa Serena", "Pro", "Em análise", "R$ 189"]].map((row) => <tr key={row[0]}><td className="py-4 font-semibold">{row[0]}</td><td className="py-4 text-muted">{row[1]}</td><td className="py-4"><span className="rounded-full bg-[#e8f2eb] px-2.5 py-1 text-xs font-semibold text-success">{row[2]}</span></td><td className="py-4">{row[3]}</td><td className="py-4"><button type="button" onClick={() => onToast(`Ações administrativas de ${row[0]} exigem autorização no backend.`)} className="rounded-lg border border-[#e5e6e2] px-3 py-1.5 text-xs font-semibold">Gerenciar</button></td></tr>)}</tbody></table></div>;
+function PlatformBusinessTable({ onToast, appointments, onComplete, onCancelAppointment, onRescheduleAppointment }: { onToast: (message: string) => void; appointments: Appointment[]; onComplete: (id: number) => void; onCancelAppointment: (id: number) => void; onRescheduleAppointment: (appointment: Appointment) => void }) {
+  const [selectedBusiness, setSelectedBusiness] = useState<string | null>(null);
+  return <><div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="text-[10px] tracking-wider text-muted"><tr><th className="pb-3 font-semibold">EMPRESA</th><th className="pb-3 font-semibold">PLANO</th><th className="pb-3 font-semibold">STATUS</th><th className="pb-3 font-semibold">MRR</th><th className="pb-3 font-semibold">AÇÃO</th></tr></thead><tbody className="divide-y divide-[#eee]">{[["Ateliê Aurora", "Pro", "Ativa", "R$ 189"], ["Barbearia Central", "Essencial", "Ativa", "R$ 99"], ["Casa Serena", "Pro", "Em análise", "R$ 189"]].map((row) => <tr key={row[0]}><td className="py-4 font-semibold">{row[0]}</td><td className="py-4 text-muted">{row[1]}</td><td className="py-4"><span className="rounded-full bg-[#e8f2eb] px-2.5 py-1 text-xs font-semibold text-success">{row[2]}</span></td><td className="py-4">{row[3]}</td><td className="py-4"><button type="button" onClick={() => setSelectedBusiness((current) => current === row[0] ? null : row[0])} className="rounded-lg border border-[#e5e6e2] px-3 py-1.5 text-xs font-semibold">{selectedBusiness === row[0] ? "Fechar detalhes" : "Gerenciar"}</button></td></tr>)}</tbody></table></div>{selectedBusiness && <><TeamManagementPanel key={selectedBusiness} businessName={selectedBusiness} onToast={onToast} /><section className="mt-5 rounded-2xl border border-[#e8e9e6] bg-white p-5"><h2 className="font-bold">Agendamentos · {selectedBusiness}</h2><p className="mt-1 text-sm text-muted">Administração EFAHub: ações demonstrativas dentro da empresa selecionada.</p><div className="mt-4"><AppointmentList items={appointments.filter((item) => (item.business ?? businesses[0].name) === selectedBusiness && item.status !== "Cancelado" && item.status !== "Concluído")} showActions onComplete={onComplete} onCancel={onCancelAppointment} onReschedule={onRescheduleAppointment} onToast={onToast} /></div></section></>}</>;
 }
 
 function ClientProfile({ onToast }: { onToast: (message: string) => void }) {
@@ -351,6 +424,7 @@ function ClientProfile({ onToast }: { onToast: (message: string) => void }) {
       <label className="flex gap-3 rounded-xl border border-[#e8e9e6] p-4 text-sm"><input type="checkbox" />Li o aviso de privacidade e concordo com o uso necessário dos dados para gerenciar meus agendamentos.</label>
       <label className="flex gap-3 rounded-xl border border-[#e8e9e6] p-4 text-sm"><input type="checkbox" />Aceito receber novidades e ofertas. Este consentimento é opcional.</label>
       <div className="rounded-xl bg-[#f7f7f5] p-4"><h3 className="text-sm font-bold">Histórico de consentimentos</h3><p className="mt-2 text-sm text-muted">Nenhum consentimento real foi registrado. O histórico será disponibilizado quando a conta estiver conectada ao sistema.</p></div>
+      <div className="rounded-xl border border-[#e8e9e6] p-4"><h3 className="text-sm font-bold">Retenção dos dados</h3><p className="mt-2 text-sm leading-6 text-muted">Dados pessoais e históricos operacionais poderão ser mantidos por até 10 anos para obrigações legais, auditoria, segurança e histórico de atendimento. Após esse prazo, poderão ser anonimizados ou excluídos conforme a política de privacidade vigente. Esta tela é demonstrativa e não representa armazenamento real.</p></div>
       <div className="flex flex-wrap gap-2"><button type="button" onClick={() => onToast("A solicitação de dados será conectada ao backend.")} className="rounded-xl border px-4 py-2.5 text-sm font-semibold">Solicitar meus dados</button><button type="button" onClick={() => onToast("A exclusão de dados requer autenticação e processamento seguro.")} className="rounded-xl border px-4 py-2.5 text-sm font-semibold">Solicitar exclusão</button></div>
     </div>}
     {tab === "help" && <div id="profile-panel-help" role="tabpanel" aria-labelledby="profile-tab-help" className="space-y-3">
@@ -371,7 +445,7 @@ function ClientAppointments({ appointments, onCancelAppointment, onConfirmPresen
       <article className="rounded-xl border border-[#e8e9e6] bg-white p-4"><p className="font-semibold">Agendamento confirmado</p><p className="mt-1 text-sm text-muted">A empresa aceitou. O horário está reservado.</p></article>
       <article className="rounded-xl border border-[#e8e9e6] bg-white p-4"><p className="font-semibold">Aguardando confirmação</p><p className="mt-1 text-sm text-muted">A solicitação foi enviada e ainda precisa da aprovação da empresa.</p></article>
     </div>
-    {appointments.filter((item) => item.status !== "Concluído" && item.status !== "Cancelado").map((item) => {
+    {appointments.filter((item) => item.customer === "João Almeida" && item.status !== "Concluído" && item.status !== "Cancelado").map((item) => {
       const timeLeft = hoursUntil(item);
       const canCancel = timeLeft >= rules.cancelLeadHours;
       const canReschedule = timeLeft >= rules.rescheduleLeadHours;
@@ -387,24 +461,184 @@ function ClientAppointments({ appointments, onCancelAppointment, onConfirmPresen
         {(!canCancel || !canReschedule) && <p className="mt-3 text-xs text-muted">O prazo mínimo definido pela empresa para alterações já foi atingido.</p>}
       </article>;
     })}
-    {appointments.filter((item) => item.status === "Cancelado" || item.status === "Concluído").map((item) => <article key={item.id} className="rounded-xl border border-[#e8e9e6] bg-white p-4 text-sm"><strong>{item.service}</strong><p className="mt-1 text-muted">{formatDate(item.date)} às {item.time} · {item.status}</p></article>)}
-    {!appointments.length && <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted">Você ainda não tem agendamentos.</p>}
+    {appointments.filter((item) => item.customer === "João Almeida" && (item.status === "Cancelado" || item.status === "Concluído")).map((item) => <article key={item.id} className="rounded-xl border border-[#e8e9e6] bg-white p-4 text-sm"><strong>{item.service}</strong><p className="mt-1 text-muted">{formatDate(item.date)} às {item.time} · {item.status}</p></article>)}
+    {!appointments.some((item) => item.customer === "João Almeida") && <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted">Você ainda não tem agendamentos.</p>}
   </div>;
 }
 
 function BookingRulesPanel({ rules, onChange }: { rules: BookingRules; onChange: (rules: BookingRules) => void }) {
+  const [selectedService, setSelectedService] = useState(services[0].name);
+  const [selectedProfessional, setSelectedProfessional] = useState(professionals[0].name);
   const updateHours = (key: "checkInLeadHours" | "cancelLeadHours" | "rescheduleLeadHours", value: string) => {
     const hours = Number(value);
     if (Number.isFinite(hours) && hours >= 0 && hours <= 168) onChange({ ...rules, [key]: hours });
   };
+  const updateLateThreshold = (value: string) => {
+    const minutes = Number(value);
+    if (Number.isInteger(minutes) && minutes >= 0 && minutes <= 180) onChange({ ...rules, lateThresholdMinutes: minutes });
+  };
+  const ruleKey = `${selectedProfessional}::${selectedService}`;
+  const defaultCommissionRule: CommissionRule = { type: "percent", value: 40, release: "afterPayment", methods: ["PIX", "Cartão", "Dinheiro"] };
+  const commissionRule = rules.commissionRules[ruleKey] ?? defaultCommissionRule;
+  const updateCommissionRule = (update: Partial<CommissionRule>) => {
+    const nextRule = { ...commissionRule, ...update };
+    if (nextRule.type === "percent" && nextRule.value > 100) nextRule.value = 100;
+    onChange({ ...rules, commissionRules: { ...rules.commissionRules, [ruleKey]: nextRule } });
+  };
+  const cashMethods: CashMethod[] = ["PIX", "Cartão", "Dinheiro"];
   return <section className="mt-5 max-w-3xl rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6">
-    <h2 className="font-bold">Regras demonstrativas de agendamento</h2><p className="mt-1 text-sm text-muted">Estas opções só afetam esta sessão de demonstração.</p>
+    <h2 className="font-bold">Regras da empresa</h2><p className="mt-1 text-sm text-muted">Configurações demonstrativas do Ateliê Aurora. Em produção, precisam ser salvas e aplicadas no servidor.</p>
     <label className="mt-4 flex items-center justify-between gap-3 rounded-xl border p-4 text-sm font-semibold">Permitir confirmação de presença pelo cliente<input type="checkbox" checked={rules.checkInEnabled} onChange={(event) => onChange({ ...rules, checkInEnabled: event.target.checked })} /></label>
     <div className="mt-4 grid gap-4 sm:grid-cols-3">
       <label className="text-xs font-semibold">Confirmar presença até (horas antes)<input type="number" min="0" max="168" value={rules.checkInLeadHours} onChange={(event) => updateHours("checkInLeadHours", event.target.value)} className="mt-2 w-full rounded-xl border px-3 py-3 text-sm" disabled={!rules.checkInEnabled} /></label>
       <label className="text-xs font-semibold">Prazo mínimo para cancelar (horas)<input type="number" min="0" max="168" value={rules.cancelLeadHours} onChange={(event) => updateHours("cancelLeadHours", event.target.value)} className="mt-2 w-full rounded-xl border px-3 py-3 text-sm" /></label>
       <label className="text-xs font-semibold">Prazo mínimo para reagendar (horas)<input type="number" min="0" max="168" value={rules.rescheduleLeadHours} onChange={(event) => updateHours("rescheduleLeadHours", event.target.value)} className="mt-2 w-full rounded-xl border px-3 py-3 text-sm" /></label>
     </div>
+    <h3 className="mt-7 border-t border-[#eee] pt-5 font-bold">Atrasos e faltas da equipe</h3>
+    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <label className="text-xs font-semibold">Considerar atraso após (minutos)<input type="number" min="0" max="180" value={rules.lateThresholdMinutes} onChange={(event) => updateLateThreshold(event.target.value)} className="mt-2 w-full rounded-xl border px-3 py-3 text-sm" /></label>
+      <label className="text-xs font-semibold">Ação quando o profissional atrasar<select value={rules.lateProfessionalAction} onChange={(event) => onChange({ ...rules, lateProfessionalAction: event.target.value as BookingRules["lateProfessionalAction"] })} className="mt-2 w-full rounded-xl border bg-white px-3 py-3 text-sm"><option value="notifyClient">Avisar o cliente</option><option value="reschedule">Encaminhar para reagendamento pela recepção</option></select></label>
+      <label className="text-xs font-semibold sm:col-span-2">Ação quando o profissional faltar<select value={rules.absentProfessionalAction} onChange={(event) => onChange({ ...rules, absentProfessionalAction: event.target.value as BookingRules["absentProfessionalAction"] })} className="mt-2 w-full rounded-xl border bg-white px-3 py-3 text-sm"><option value="notifyClient">Avisar o cliente</option><option value="automaticReschedule">Propor remarcação automática ao cliente</option><option value="contactClient">Recepção entra em contato para reagendar</option></select></label>
+    </div>
+    <h3 className="mt-7 border-t border-[#eee] pt-5 font-bold">Regras de comissão</h3>
+    <p className="mt-1 text-sm text-muted">Configure a comissão para cada combinação de serviço e profissional. Só o administrador da empresa pode corrigir essas regras.</p>
+    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <label className="text-xs font-semibold">Serviço<select value={selectedService} onChange={(event) => setSelectedService(event.target.value)} className="mt-2 w-full rounded-xl border bg-white px-3 py-3 text-sm">{services.map((service) => <option key={service.id}>{service.name}</option>)}</select></label>
+      <label className="text-xs font-semibold">Profissional<select value={selectedProfessional} onChange={(event) => setSelectedProfessional(event.target.value)} className="mt-2 w-full rounded-xl border bg-white px-3 py-3 text-sm">{professionals.map((professional) => <option key={professional.id}>{professional.name}</option>)}</select></label>
+      <label className="text-xs font-semibold">Tipo de comissão<select value={commissionRule.type} onChange={(event) => updateCommissionRule({ type: event.target.value as CommissionRule["type"] })} className="mt-2 w-full rounded-xl border bg-white px-3 py-3 text-sm"><option value="percent">Percentual</option><option value="fixed">Valor fixo por atendimento</option></select></label>
+      <label className="text-xs font-semibold">{commissionRule.type === "percent" ? "Percentual (%)" : "Valor fixo (R$)"}<input type="number" min="0" max={commissionRule.type === "percent" ? 100 : undefined} step="0.01" value={commissionRule.value} onChange={(event) => { const amount = Number(event.target.value); if (Number.isFinite(amount) && amount >= 0 && (commissionRule.type !== "percent" || amount <= 100)) updateCommissionRule({ value: amount }); }} className="mt-2 w-full rounded-xl border px-3 py-3 text-sm" /></label>
+    </div>
+    <fieldset className="mt-4 rounded-xl border p-4"><legend className="px-1 text-xs font-semibold">Formas presenciais elegíveis</legend><div className="flex flex-wrap gap-4">{cashMethods.map((method) => { const checked = commissionRule.methods.includes(method); return <label key={method} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={checked} disabled={checked && commissionRule.methods.length === 1} onChange={(event) => updateCommissionRule({ methods: event.target.checked ? [...commissionRule.methods, method] : commissionRule.methods.filter((item) => item !== method) })} />{method}</label>; })}</div></fieldset>
+    <label className="mt-4 block text-xs font-semibold">Liberar comissão<select value={commissionRule.release} onChange={(event) => updateCommissionRule({ release: event.target.value as CommissionRule["release"] })} className="mt-2 w-full rounded-xl border bg-white px-3 py-3 text-sm"><option value="afterCompletion">Após concluir o atendimento</option><option value="afterPayment">Após registrar o pagamento presencial no caixa</option></select></label>
+  </section>;
+}
+
+type DemoTeamMember = { id: number; email: string; name: string; role: "Recepcionista" | "Profissional"; status: "Ativo" | "Convite pendente" };
+type DemoSubscription = { cycle: string; cancelAtEnd: boolean; access: "Ativo" | "Parcialmente limitado" | "Suspenso"; retryCount: number };
+const initialTeamMembers: DemoTeamMember[] = [
+  { id: 1, name: "Fernanda Costa", email: "fernanda@exemplo.com", role: "Recepcionista", status: "Ativo" },
+  { id: 2, name: "Marina Costa", email: "marina@exemplo.com", role: "Profissional", status: "Ativo" }
+];
+
+function TeamManagementPanel({ businessName, onToast }: { businessName: string; onToast: (message: string) => void }) {
+  const storageKey = `${TEAM_SESSION_PREFIX}${businessName}`;
+  const [members, setMembers] = useState<DemoTeamMember[]>(initialTeamMembers);
+  const [membersReady, setMembersReady] = useState(false);
+  const [email, setEmail] = useState("");
+  const [memberRole, setMemberRole] = useState<DemoTeamMember["role"]>("Recepcionista");
+
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = teamStateSchema.safeParse(JSON.parse(saved));
+        if (!parsed.success) throw new Error("Os membros locais têm um formato inválido.");
+        setMembers(parsed.data);
+      } else {
+        setMembers(initialTeamMembers);
+      }
+    } catch (error) {
+      console.error("Não foi possível restaurar a equipe demonstrativa.", error);
+      onToast("A equipe demonstrativa não pôde ser restaurada nesta aba.");
+    } finally {
+      setMembersReady(true);
+    }
+  }, [businessName, onToast, storageKey]);
+
+  useEffect(() => {
+    if (!membersReady) return;
+    try {
+      window.sessionStorage.setItem(storageKey, JSON.stringify(members));
+    } catch (error) {
+      console.error("Não foi possível manter a equipe durante a navegação.", error);
+      onToast("A alteração foi feita, mas a equipe pode ser perdida ao trocar de página.");
+    }
+  }, [members, membersReady, onToast, storageKey]);
+
+  function inviteMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+    if (members.some((member) => member.email.toLowerCase() === normalizedEmail)) {
+      onToast("Este endereço já está na equipe ou possui um convite pendente.");
+      return;
+    }
+    setMembers((current) => [...current, { id: Date.now(), name: normalizedEmail.split("@")[0], email: normalizedEmail, role: memberRole, status: "Convite pendente" }]);
+    setEmail("");
+    onToast("Convite demonstrativo registrado. Nenhum e-mail foi enviado.");
+  }
+
+  function removeMember(member: DemoTeamMember) {
+    if (!window.confirm(`Remover ${member.name} da equipe de ${businessName}?`)) return;
+    setMembers((current) => current.filter((item) => item.id !== member.id));
+    onToast("Acesso removido somente nesta demonstração.");
+  }
+
+  return <section className="mt-5 max-w-4xl rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6">
+    <h2 className="font-bold">Equipe · {businessName}</h2>
+    <p className="mt-1 text-sm text-muted">Administrador da empresa e administrador EFAHub podem convidar ou remover funcionários. No protótipo, os convites não são enviados; as alterações duram apenas na sessão desta aba.</p>
+    <form onSubmit={inviteMember} className="mt-5 grid gap-3 sm:grid-cols-[1fr_200px_auto]">
+      <label className="text-xs font-semibold">E-mail do funcionário<input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-xl border px-3 py-3 text-sm" placeholder="pessoa@empresa.com" /></label>
+      <label className="text-xs font-semibold">Perfil<select value={memberRole} onChange={(event) => setMemberRole(event.target.value as DemoTeamMember["role"])} className="mt-2 w-full rounded-xl border bg-white px-3 py-3 text-sm"><option>Recepcionista</option><option>Profissional</option></select></label>
+      <button type="submit" className="self-end rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white">Convidar</button>
+    </form>
+    <ul className="mt-5 divide-y divide-[#eee]">{members.map((member) => <li key={member.id} className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0"><span><strong className="block text-sm">{member.name}</strong><span className="mt-1 block text-xs text-muted">{member.email} · {member.role} · {member.status}</span></span><button type="button" onClick={() => removeMember(member)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700">Remover</button></li>)}</ul>
+  </section>;
+}
+
+function CashRegistrationPanel({ appointments, onMarkPayment }: { appointments: Appointment[]; onMarkPayment: (id: number, method: CashMethod) => void }) {
+  const [methods, setMethods] = useState<Record<number, CashMethod>>({});
+  const completed = appointments.filter((appointment) => appointment.status === "Concluído");
+
+  return <section className="mt-5 rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6">
+    <h2 className="font-bold">Registro de pagamentos presenciais</h2>
+    <p className="mt-1 text-sm text-muted">Registre somente depois que o atendimento foi concluído e a empresa recebeu o valor no local. Isso não inicia cobrança, captura dinheiro nem envia pagamento pelo EFAHub.</p>
+    <div className="mt-4 divide-y divide-[#eee]">{completed.map((appointment) => <div key={appointment.id} className="flex flex-wrap items-center gap-3 py-4 first:pt-0"><span className="min-w-0 flex-1"><strong className="block text-sm">{appointment.customer} · {appointment.service}</strong><span className="mt-1 block text-xs text-muted">{formatDate(appointment.date)} · {formatCurrency(appointment.price)}</span></span>{appointment.paymentStatus === "received" ? <span className="rounded-full bg-[#e7f2eb] px-3 py-1 text-xs font-semibold text-[#217a5b]">Recebido · {appointment.paymentMethod}</span> : <div className="flex flex-wrap items-center gap-2"><select aria-label={`Forma de pagamento presencial de ${appointment.customer}`} value={methods[appointment.id] ?? "PIX"} onChange={(event) => setMethods((current) => ({ ...current, [appointment.id]: event.target.value as CashMethod }))} className="rounded-lg border bg-white px-3 py-2 text-xs"><option>PIX</option><option>Cartão</option><option>Dinheiro</option></select><button type="button" onClick={() => onMarkPayment(appointment.id, methods[appointment.id] ?? "PIX")} className="rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-white">Registrar recebido</button></div>}</div>)}</div>
+    {!completed.length && <p className="mt-4 rounded-xl border border-dashed p-5 text-center text-sm text-muted">Quando um atendimento for concluído, ele aparecerá aqui para registro.</p>}
+  </section>;
+}
+
+function SubscriptionPanel({ role, onToast }: { role: "businessAdmin" | "platformAdmin"; onToast: (message: string) => void }) {
+  const storageKey = `efahub-demo-subscription-v1:${role}`;
+  const [subscription, setSubscription] = useState<DemoSubscription>({ cycle: "Mensal", cancelAtEnd: false, access: "Ativo", retryCount: 0 });
+  const [subscriptionReady, setSubscriptionReady] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = subscriptionStateSchema.safeParse(JSON.parse(saved));
+        if (!parsed.success) throw new Error("A assinatura local tem um formato inválido.");
+        setSubscription(parsed.data);
+      }
+    } catch (error) {
+      console.error("Não foi possível restaurar o estado da assinatura demonstrativa.", error);
+      onToast("A assinatura demonstrativa não pôde ser restaurada nesta aba.");
+    } finally {
+      setSubscriptionReady(true);
+    }
+  }, [onToast, storageKey]);
+
+  useEffect(() => {
+    if (!subscriptionReady) return;
+    try {
+      window.sessionStorage.setItem(storageKey, JSON.stringify(subscription));
+    } catch (error) {
+      console.error("Não foi possível manter a assinatura durante a navegação.", error);
+      onToast("A alteração foi feita, mas a assinatura pode ser perdida ao trocar de página.");
+    }
+  }, [onToast, subscription, subscriptionReady, storageKey]);
+
+  return <section className="mt-5 max-w-4xl rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6">
+    <h2 className="font-bold">{role === "businessAdmin" ? "Assinatura da empresa com o EFAHub" : "Gestão das assinaturas do EFAHub"}</h2>
+    <p className="mt-1 text-sm text-muted">Controles demonstrativos: nenhuma cobrança, renovação, notificação ou alteração de acesso é executada de verdade.</p>
+    {role === "businessAdmin" ? <div className="mt-4 grid gap-4 md:grid-cols-[1fr_260px]">
+      <div className="rounded-xl bg-[#f7f7f5] p-4"><p className="text-xs text-muted">Plano contratado · ciclo {subscription.cycle.toLowerCase()}</p><strong className="mt-1 block">EFAHub Pro · renovação recorrente</strong><p className="mt-2 text-sm text-muted">{subscription.cancelAtEnd ? "Cancelamento solicitado. A assinatura continua ativa até o fim do período já pago e não haverá nova cobrança." : "Assinatura ativa; a próxima renovação ocorrerá ao final do ciclo pago."}</p></div>
+      <div><label className="text-xs font-semibold">Ciclo<select value={subscription.cycle} onChange={(event) => setSubscription((current) => ({ ...current, cycle: event.target.value }))} className="mt-2 w-full rounded-xl border bg-white px-3 py-3 text-sm"><option>Mensal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option></select></label><button type="button" onClick={() => { if (!subscription.cancelAtEnd && !window.confirm("A assinatura ficará ativa até o fim do período pago e não haverá novas cobranças. Solicitar cancelamento?")) return; setSubscription((current) => ({ ...current, cancelAtEnd: !current.cancelAtEnd })); onToast(subscription.cancelAtEnd ? "Reativação demonstrativa solicitada." : "Cancelamento demonstrativo programado para o fim do período pago."); }} className="mt-3 w-full rounded-xl border border-[#e5e6e2] px-4 py-3 text-sm font-semibold">{subscription.cancelAtEnd ? "Reativar renovação" : "Solicitar cancelamento"}</button></div>
+    </div> : <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="rounded-xl bg-[#f7f7f5] p-4"><p className="text-xs text-muted">Conta demonstrativa · Ateliê Aurora</p><strong className="mt-1 block">Pagamento pendente</strong><p className="mt-2 text-sm text-muted">Falhas podem gerar novas tentativas e notificações; o acesso pode ficar parcialmente limitado ou suspenso até a regularização.</p><p className="mt-2 text-xs text-muted">Tentativas simuladas nesta tela: {subscription.retryCount}</p></div>
+      <div><label className="text-xs font-semibold">Acesso da empresa<select value={subscription.access} onChange={(event) => setSubscription((current) => ({ ...current, access: event.target.value as DemoSubscription["access"] }))} className="mt-2 w-full rounded-xl border bg-white px-3 py-3 text-sm"><option>Ativo</option><option>Parcialmente limitado</option><option>Suspenso</option></select></label><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => { setSubscription((current) => ({ ...current, retryCount: current.retryCount + 1 })); onToast("Tentativa de cobrança apenas simulada; nenhum pagamento foi processado."); }} className="rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white">Simular nova tentativa</button><button type="button" onClick={() => onToast("Notificação de atraso apenas simulada; nenhuma mensagem foi enviada.")} className="rounded-xl border px-4 py-2.5 text-sm font-semibold">Simular aviso</button></div></div>
+    </div>}
+    <p className="mt-4 border-t border-[#eee] pt-4 text-xs leading-5 text-muted">O cancelamento não apaga imediatamente os dados. Eles podem ser mantidos para eventual reativação e obrigações legais, observando a política de retenção e privacidade.</p>
   </section>;
 }
 
@@ -469,7 +703,7 @@ function CouponManager({ coupons, onCouponsChange, onToast }: { coupons: DemoCou
   </section>;
 }
 
-function ModuleView({ role, view, appointments, onBook, onToast, onComplete, onQuickCreate, onNavigate, onViewBusiness, businessId, favoriteBusinessIds, onToggleFavorite, themePreference, resolvedTheme, onThemeChange, onCancelAppointment, onConfirmPresence, onRescheduleAppointment, bookingRules, onBookingRulesChange, coupons, onCouponsChange }: Props) {
+function ModuleView({ role, view, appointments, onBook, onToast, onComplete, onMarkPayment, onQuickCreate, onNavigate, onViewBusiness, businessId, favoriteBusinessIds, onToggleFavorite, themePreference, resolvedTheme, onThemeChange, onCancelAppointment, onConfirmPresence, onRescheduleAppointment, bookingRules, onBookingRulesChange, coupons, onCouponsChange }: Props) {
   const upcoming = appointments.filter((item) => item.status !== "Concluído" && item.status !== "Cancelado");
   const moduleTitles: Partial<Record<ViewId, [string, string]>> = {
     appointments: ["Meus agendamentos", "Consulte e gerencie suas próximas experiências."],
@@ -504,30 +738,34 @@ function ModuleView({ role, view, appointments, onBook, onToast, onComplete, onQ
   const isEmployee = role === "employee";
   const title = isPlatform && view === "finance" ? "Financeiro EFAHub" : defaultTitle;
   const detail = isPlatform && view === "finance" ? "Acompanhe somente as assinaturas e cobranças pagas pelas empresas ao EFAHub." : defaultDetail;
-  const primaryAction = isClient ? "Encontrar horário" : isEmployee ? "Registrar chegada" : "Novo agendamento";
+  const primaryAction = isClient ? "Encontrar horário" : "Novo agendamento";
   const showPrimaryAction = view !== "newBooking" && view !== "newClient";
 
   return (
     <>
       <DemoNotice />
-      <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold tracking-[.16em] text-[var(--accent)]">{roleOptions.find((item) => item.id === role)?.label.toUpperCase()}</p><h1 className="mt-2 text-3xl font-bold tracking-tight">{title}</h1><p className="mt-2 text-sm text-muted">{detail}</p></div>{showPrimaryAction && <button type="button" onClick={() => isClient ? onBook() : isEmployee ? onNavigate("checkin") : role === "businessAdmin" ? onNavigate("newBooking") : onToast(`${primaryAction}: ação demonstrativa.`)} className="rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white">{primaryAction}</button>}</div>
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold tracking-[.16em] text-[var(--accent)]">{roleOptions.find((item) => item.id === role)?.label.toUpperCase()}</p><h1 className="mt-2 text-3xl font-bold tracking-tight">{title}</h1><p className="mt-2 text-sm text-muted">{detail}</p></div>{showPrimaryAction && <button type="button" onClick={() => isClient ? onBook() : onNavigate("newBooking")} className="rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white">{primaryAction}</button>}</div>
       {view === "favorites" && (favoriteBusinessIds.length ? <BusinessCards onBook={onBook} onViewBusiness={onViewBusiness} favoriteBusinessIds={favoriteBusinessIds} onToggleFavorite={onToggleFavorite} items={businesses.filter((business) => favoriteBusinessIds.includes(business.id))} /> : <section className="rounded-2xl border border-dashed border-[#dfe1dc] bg-white p-8 text-center"><h2 className="font-bold">Você ainda não salvou empresas</h2><p className="mt-2 text-sm text-muted">Toque no coração de uma empresa para encontrá-la aqui.</p><button type="button" onClick={() => onNavigate("search")} className="mt-4 rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white">Buscar empresas</button></section>)}
       {view === "search" && <ClientSearchView onBook={onBook} onViewBusiness={(id) => onViewBusiness(id)} />}
       {(view === "business" || view === "companyServices") && <ClientBusinessView onBook={onBook} onViewBusiness={onViewBusiness} businessId={businessId} servicesOnly={view === "companyServices"} />}
-      {view === "newBooking" && <QuickBookingForm onCreate={onQuickCreate} />}
+      {view === "newBooking" && <QuickBookingForm onCreate={onQuickCreate} allowBusinessSelection={isPlatform} />}
       {view === "newClient" && <NewClientForm onToast={onToast} />}
       {view === "reports" && <ReportsView />}
       {view === "appointments" && isClient && <ClientAppointments appointments={appointments} onCancelAppointment={onCancelAppointment} onConfirmPresence={onConfirmPresence} onRescheduleAppointment={onRescheduleAppointment} rules={bookingRules} />}
-      {(view === "agenda" || view === "checkin" || (view === "appointments" && !isClient)) && <section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title={view === "checkin" ? "Fila de atendimento" : "Próximos horários"} detail="Dados fictícios para demonstração" /><AppointmentList items={upcoming} showActions={!isClient} onComplete={onComplete} onToast={onToast} /></section>}
+      {(view === "agenda" || view === "checkin" || (view === "appointments" && !isClient)) && <section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title={view === "checkin" ? "Fila de atendimento" : "Próximos horários"} detail="Dados fictícios para demonstração" /><AppointmentList items={upcoming} showActions={!isClient} onComplete={onComplete} onCancel={onCancelAppointment} onReschedule={onRescheduleAppointment} onToast={onToast} /></section>}
       {view === "clients" && <section className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft sm:p-6"><SectionHeading title="Clientes recentes" detail="Histórico resumido baseado em dados de demonstração" /><div className="divide-y divide-[#eee]">{appointments.map((item) => <div key={item.id} className="flex items-center gap-3 py-4 first:pt-0"><span className="grid size-10 place-items-center rounded-full bg-[var(--accent-soft)] text-xs font-bold text-[var(--accent)]">{item.customer.split(" ").map((part) => part[0]).slice(0, 2).join("")}</span><div className="flex-1"><p className="text-sm font-semibold">{item.customer}</p><p className="mt-1 text-xs text-muted">{item.service} · última visita {formatDate(item.date)}</p></div><button type="button" onClick={() => onToast("Perfil do cliente demonstrativo.")} className="rounded-lg border border-[#e5e6e2] px-3 py-2 text-xs font-semibold">Ver perfil</button></div>)}</div></section>}
       {view === "notifications" && <section className="space-y-3">{["Seu horário está confirmado", "Novidades perto de você", "Avalie sua última experiência"].map((notice, index) => <article key={notice} className="rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft"><p className="text-xs text-muted">{index + 1} h atrás</p><h2 className="mt-2 font-bold">{notice}</h2><p className="mt-1 text-sm text-muted">Acompanhe novidades e informações importantes da sua conta EFAHub.</p></article>)}</section>}
       {view === "profile" && role === "client" && <ClientProfile onToast={onToast} />}
       {(view === "profile" || view === "settings") && <div className="mt-6"><ThemePreferencePanel preference={themePreference} resolvedTheme={resolvedTheme} onChange={onThemeChange} /></div>}
       {view === "settings" && role === "businessAdmin" && <BookingRulesPanel rules={bookingRules} onChange={onBookingRulesChange} />}
+      {view === "settings" && role === "businessAdmin" && <SubscriptionPanel key="business-subscription" role="businessAdmin" onToast={onToast} />}
+      {view === "subscriptions" && role === "platformAdmin" && <SubscriptionPanel key="platform-subscription" role="platformAdmin" onToast={onToast} />}
+      {view === "team" && role === "businessAdmin" && <TeamManagementPanel businessName={businesses[0].name} onToast={onToast} />}
       {view === "marketing" && role === "businessAdmin" && <CouponManager coupons={coupons} onCouponsChange={onCouponsChange} onToast={onToast} />}
       {["team", "services", "finance", "marketing", "inventory", "settings", "earnings", "payments", "businesses", "subscriptions", "support", "audit"].includes(view) && <ModuleCards role={role} view={view} onToast={onToast} />}
-      {isPlatform && view === "businesses" && <div className="mt-5 rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft"><PlatformBusinessTable onToast={onToast} /></div>}
-      {isEmployee && view === "payments" && <div className="mt-5"><p className="mb-4 text-sm text-muted">Registre somente para controle os valores pagos presencialmente no estabelecimento. O EFAHub não recebe nem processa esses pagamentos.</p><div className="grid gap-4 sm:grid-cols-3"><MetricCard label="Aguardando pagamento no local" value="R$ 420" note="4 atendimentos" icon={Clock3} /><MetricCard label="Registrado como recebido" value="R$ 1.280" note="8 lançamentos demonstrativos" icon={Check} /><MetricCard label="Pendências de registro" value="4" note="última atualização local" icon={Clock3} /></div></div>}
+      {isPlatform && view === "businesses" && <div className="mt-5 rounded-2xl border border-[#e8e9e6] bg-white p-5 shadow-soft"><PlatformBusinessTable onToast={onToast} appointments={appointments} onComplete={onComplete} onCancelAppointment={onCancelAppointment} onRescheduleAppointment={onRescheduleAppointment} /></div>}
+      {isEmployee && view === "payments" && <div className="mt-5"><div className="mb-4 grid gap-4 sm:grid-cols-3"><MetricCard label="Aguardando pagamento no local" value="R$ 420" note="4 atendimentos" icon={Clock3} /><MetricCard label="Registrado como recebido" value="R$ 1.280" note="8 lançamentos demonstrativos" icon={Check} /><MetricCard label="Pendências de registro" value="4" note="última atualização local" icon={Clock3} /></div><CashRegistrationPanel appointments={appointments} onMarkPayment={onMarkPayment} /></div>}
+      {role === "businessAdmin" && view === "finance" && <CashRegistrationPanel appointments={appointments} onMarkPayment={onMarkPayment} />}
     </>
   );
 }
@@ -572,7 +810,7 @@ function getDemoDateStatus(date: Date): DemoDateStatus {
   return "available";
 }
 
-function BookingWizard({ onClose, onConfirm, initialStep = 0, initialBusinessId = "atelier", initialServiceId, coupons, onStepChange }: { onClose: () => void; onConfirm: (booking: Booking) => void; initialStep?: number; initialBusinessId?: string; initialServiceId?: string; coupons: DemoCoupon[]; onStepChange: (step: number) => void }) {
+function BookingWizard({ onClose, onConfirm, initialStep = 0, initialBusinessId = "atelier", initialServiceId, initialCustomer = "João Almeida", coupons, onStepChange }: { onClose: () => void; onConfirm: (booking: Booking) => void; initialStep?: number; initialBusinessId?: string; initialServiceId?: string; initialCustomer?: string; coupons: DemoCoupon[]; onStepChange: (step: number) => void }) {
   const dialogRef = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -638,7 +876,7 @@ function BookingWizard({ onClose, onConfirm, initialStep = 0, initialBusinessId 
   const [time, setTime] = useState("10:30");
   const contactForm = useForm<BookingContact>({
     resolver: zodResolver(bookingContactSchema),
-    defaultValues: { customer: "João Almeida", phone: "(11) 99999-9999" }
+    defaultValues: { customer: initialCustomer, phone: "(11) 99999-9999" }
   });
   const steps = ["Empresa", "Serviço", "Profissional", "Data e horário", "Resumo"];
   const categories = ["Todas", ...new Set(services.map((item) => item.category))];
@@ -756,11 +994,23 @@ export default function EfaHubApp({ initialRole = "businessAdmin", initialView =
   const [role, setRole] = useState<Role>(initialRole);
   const [view, setView] = useState<ViewId>(initialView);
   const [appointments, setAppointments] = useState<Appointment[]>(makeInitialAppointments);
+  const [appointmentsReady, setAppointmentsReady] = useState(false);
   const [coupons, setCoupons] = useState<DemoCoupon[]>(initialDemoCoupons);
+  const [couponsReady, setCouponsReady] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(initialBookingStep !== undefined);
   const [bookingOptions, setBookingOptions] = useState<BookingOptions>({ businessId: initialBusinessId, step: initialBookingStep });
   const [reschedulingId, setReschedulingId] = useState<number | null>(null);
-  const [bookingRules, setBookingRules] = useState<BookingRules>({ checkInEnabled: true, checkInLeadHours: 24, cancelLeadHours: 12, rescheduleLeadHours: 12 });
+  const [bookingRules, setBookingRules] = useState<BookingRules>({
+    checkInEnabled: true,
+    checkInLeadHours: 24,
+    cancelLeadHours: 12,
+    rescheduleLeadHours: 12,
+    lateThresholdMinutes: 15,
+    lateProfessionalAction: "notifyClient",
+    absentProfessionalAction: "contactClient",
+    commissionRules: {}
+  });
+  const [bookingRulesReady, setBookingRulesReady] = useState(false);
   const [businessId, setBusinessId] = useState(initialBusinessId);
   const [favoriteBusinessIds, setFavoriteBusinessIds] = useState<string[]>([]);
   const [favoritesReady, setFavoritesReady] = useState(false);
@@ -771,6 +1021,84 @@ export default function EfaHubApp({ initialRole = "businessAdmin", initialView =
   const currentNav = navigation[role];
   const activeLabel = currentNav.find((item) => item.id === view)?.label ?? currentNav[0].label;
   const todayLabel = useMemo(() => new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" }).format(new Date()), []);
+
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(APPOINTMENTS_SESSION_KEY);
+      if (saved) {
+        const parsed = appointmentStateSchema.safeParse(JSON.parse(saved));
+        if (!parsed.success) throw new Error("Os agendamentos locais têm um formato inválido.");
+        setAppointments(parsed.data);
+      }
+    } catch (error) {
+      console.error("Não foi possível restaurar os agendamentos da demonstração.", error);
+      setToast("Os agendamentos demonstrativos não puderam ser restaurados nesta aba.");
+    } finally {
+      setAppointmentsReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!appointmentsReady) return;
+    try {
+      window.sessionStorage.setItem(APPOINTMENTS_SESSION_KEY, JSON.stringify(appointments));
+    } catch (error) {
+      console.error("Não foi possível manter os agendamentos durante a navegação.", error);
+      setToast("A alteração foi feita, mas os agendamentos podem ser perdidos ao trocar de página.");
+    }
+  }, [appointments, appointmentsReady]);
+
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(COUPONS_SESSION_KEY);
+      if (saved) {
+        const parsed = couponStateSchema.safeParse(JSON.parse(saved));
+        if (!parsed.success) throw new Error("Os cupons locais têm um formato inválido.");
+        setCoupons(parsed.data);
+      }
+    } catch (error) {
+      console.error("Não foi possível restaurar os cupons da demonstração.", error);
+      setToast("Os cupons demonstrativos não puderam ser restaurados nesta aba.");
+    } finally {
+      setCouponsReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!couponsReady) return;
+    try {
+      window.sessionStorage.setItem(COUPONS_SESSION_KEY, JSON.stringify(coupons));
+    } catch (error) {
+      console.error("Não foi possível manter os cupons durante a navegação.", error);
+      setToast("A alteração foi feita, mas os cupons podem ser perdidos ao trocar de página.");
+    }
+  }, [coupons, couponsReady]);
+
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(BOOKING_RULES_SESSION_KEY);
+      if (saved) {
+        const parsed = bookingRulesStateSchema.safeParse(JSON.parse(saved));
+        if (!parsed.success) throw new Error("As regras locais têm um formato inválido.");
+        setBookingRules(parsed.data);
+      }
+    } catch (error) {
+      console.error("Não foi possível restaurar as regras de agendamento.", error);
+      setToast("As regras demonstrativas não puderam ser restauradas nesta aba.");
+    } finally {
+      setBookingRulesReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!bookingRulesReady) return;
+    try {
+      window.sessionStorage.setItem(BOOKING_RULES_SESSION_KEY, JSON.stringify(bookingRules));
+    } catch (error) {
+      console.error("Não foi possível manter as regras durante a navegação.", error);
+      setToast("A alteração foi feita, mas as regras podem ser perdidas ao trocar de página.");
+    }
+  }, [bookingRules, bookingRulesReady]);
 
   useEffect(() => {
     try {
@@ -892,33 +1220,35 @@ export default function EfaHubApp({ initialRole = "businessAdmin", initialView =
     setBookingOpen(true);
   }
 
-  function showToast(message: string) {
+  const showToast = useCallback((message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 3200);
-  }
+  }, []);
 
   function addBooking(booking: Booking) {
-    if (booking.couponCode) {
-      setCoupons((current) => current.map((coupon) => coupon.code === booking.couponCode ? { ...coupon, usedCount: coupon.usedCount + 1 } : coupon));
-    }
     if (reschedulingId !== null) {
+      const currentAppointment = appointments.find((item) => item.id === reschedulingId);
       setAppointments((current) => current.map((item) => item.id === reschedulingId
-        ? { ...item, service: booking.service, professional: booking.professional, date: booking.date, time: booking.time, price: booking.price, status: "Aguardando", presenceConfirmed: false }
+        ? { ...item, service: booking.service, professional: booking.professional, date: booking.date, time: booking.time, price: booking.price, status: currentAppointment?.status ?? item.status, presenceConfirmed: false }
         : item));
       setReschedulingId(null);
       setBookingOpen(false);
       showToast("Agendamento reagendado nesta demonstração.");
-      navigate("appointments");
+      navigate(role === "client" ? "appointments" : role === "platformAdmin" ? "businesses" : "agenda");
       return;
+    }
+    if (booking.couponCode) {
+      setCoupons((current) => current.map((coupon) => coupon.code === booking.couponCode ? { ...coupon, usedCount: coupon.usedCount + 1 } : coupon));
     }
     const newAppointment: Appointment = {
       id: Date.now(),
       customer: booking.customer,
+      business: booking.business,
       service: booking.service,
       professional: booking.professional,
       date: booking.date,
       time: booking.time,
-      status: "Aguardando",
+      status: role === "client" ? "Aguardando" : "Confirmado",
       price: booking.price
     };
     setAppointments((current) => [newAppointment, ...current]);
@@ -929,34 +1259,84 @@ export default function EfaHubApp({ initialRole = "businessAdmin", initialView =
   }
 
   function completeAppointment(id: number) {
-    setAppointments((current) => current.map((item) => item.id === id ? { ...item, status: "Concluído" } : item));
+    const appointment = appointments.find((item) => item.id === id);
+    if (!appointment || appointment.status === "Cancelado" || appointment.status === "Concluído") return;
+    if (new Date(`${appointment.date}T${appointment.time}:00`).getTime() > Date.now()) {
+      showToast("O atendimento só pode ser finalizado a partir do horário marcado.");
+      return;
+    }
+    setAppointments((current) => current.map((item) => item.id === id ? { ...item, status: "Concluído", paymentStatus: "pending" } : item));
     showToast("Atendimento marcado como concluído no protótipo.");
   }
 
   function cancelAppointment(id: number) {
+    const appointment = appointments.find((item) => item.id === id);
+    if (!appointment || appointment.status === "Cancelado" || appointment.status === "Concluído") return;
+    if (role === "client") {
+      if (appointment.customer !== "João Almeida") {
+        showToast("Você só pode cancelar seus próprios agendamentos.");
+        return;
+      }
+      const hoursUntil = (new Date(`${appointment.date}T${appointment.time}:00`).getTime() - Date.now()) / 3_600_000;
+      if (hoursUntil < bookingRules.cancelLeadHours) {
+        showToast(`O cancelamento deve ser solicitado com pelo menos ${bookingRules.cancelLeadHours} horas de antecedência.`);
+        return;
+      }
+    }
     if (!window.confirm("Deseja cancelar este agendamento?")) return;
     setAppointments((current) => current.map((item) => item.id === id ? { ...item, status: "Cancelado" } : item));
     showToast("Agendamento cancelado nesta demonstração.");
   }
 
   function confirmPresence(id: number) {
+    const appointment = appointments.find((item) => item.id === id);
+    if (role !== "client" || !appointment || appointment.customer !== "João Almeida" || !bookingRules.checkInEnabled) return;
+    const hoursUntil = (new Date(`${appointment.date}T${appointment.time}:00`).getTime() - Date.now()) / 3_600_000;
+    if (hoursUntil < 0 || hoursUntil > bookingRules.checkInLeadHours) return;
     setAppointments((current) => current.map((item) => item.id === id ? { ...item, presenceConfirmed: true } : item));
     showToast("Presença confirmada nesta demonstração.");
   }
 
   function rescheduleAppointment(appointment: Appointment) {
+    if (appointment.status === "Concluído" || appointment.status === "Cancelado") return;
+    if (role === "client") {
+      if (appointment.customer !== "João Almeida") {
+        showToast("Você só pode alterar seus próprios agendamentos.");
+        return;
+      }
+      const hoursUntil = (new Date(`${appointment.date}T${appointment.time}:00`).getTime() - Date.now()) / 3_600_000;
+      if (hoursUntil < bookingRules.rescheduleLeadHours) {
+        showToast(`A remarcação deve ser solicitada com pelo menos ${bookingRules.rescheduleLeadHours} horas de antecedência.`);
+        return;
+      }
+    }
     setReschedulingId(appointment.id);
-    setBookingOptions({ businessId: initialBusinessId, serviceId: services.find((item) => item.name === appointment.service)?.id, step: 2 });
+    setBookingOptions({ businessId: businesses.find((item) => item.name === appointment.business)?.id ?? initialBusinessId, serviceId: services.find((item) => item.name === appointment.service)?.id, step: 2 });
     setBookingOpen(true);
   }
 
   function quickCreateAppointment(appointment: Omit<Appointment, "id">) {
+    if (!["employee", "professional", "businessAdmin", "platformAdmin"].includes(role)) {
+      showToast("Este perfil não pode criar agendamentos pela agenda da empresa.");
+      return;
+    }
     setAppointments((current) => [{ ...appointment, id: Date.now() }, ...current]);
     showToast("Agendamento criado nesta demonstração.");
-    navigate("agenda");
+    navigate(role === "platformAdmin" ? "businesses" : "agenda");
   }
 
-  const contentProps: Props = { role, view, appointments, onBook: openBooking, onToast: showToast, onComplete: completeAppointment, onQuickCreate: quickCreateAppointment, onNavigate: navigate, onViewBusiness: navigateBusiness, businessId, favoriteBusinessIds, onToggleFavorite: toggleFavoriteBusiness, themePreference, resolvedTheme, onThemeChange: setThemePreference, onCancelAppointment: cancelAppointment, onConfirmPresence: confirmPresence, onRescheduleAppointment: rescheduleAppointment, bookingRules, onBookingRulesChange: setBookingRules, coupons, onCouponsChange: setCoupons };
+  function markPaymentReceived(id: number, method: CashMethod) {
+    if (role !== "employee" && role !== "businessAdmin") return;
+    const appointment = appointments.find((item) => item.id === id);
+    if (!appointment || appointment.status !== "Concluído") {
+      showToast("Só é possível registrar o pagamento depois que o atendimento foi concluído.");
+      return;
+    }
+    setAppointments((current) => current.map((item) => item.id === id ? { ...item, paymentStatus: "received", paymentMethod: method } : item));
+    showToast(`Recebimento de ${method} anotado. Nenhum pagamento foi processado pelo EFAHub.`);
+  }
+
+  const contentProps: Props = { role, view, appointments, onBook: openBooking, onToast: showToast, onComplete: completeAppointment, onMarkPayment: markPaymentReceived, onQuickCreate: quickCreateAppointment, onNavigate: navigate, onViewBusiness: navigateBusiness, businessId, favoriteBusinessIds, onToggleFavorite: toggleFavoriteBusiness, themePreference, resolvedTheme, onThemeChange: setThemePreference, onCancelAppointment: cancelAppointment, onConfirmPresence: confirmPresence, onRescheduleAppointment: rescheduleAppointment, bookingRules, onBookingRulesChange: setBookingRules, coupons, onCouponsChange: setCoupons };
   const dashboard = view === "home";
 
   return (
@@ -984,7 +1364,7 @@ export default function EfaHubApp({ initialRole = "businessAdmin", initialView =
         </main>
       </div>
       <nav className="client-bottom-nav justify-around" aria-label={`Navegação: ${roleOptions.find((item) => item.id === role)?.label}`}>{currentNav.map(({ id, label, icon: Icon }) => <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => navigate(id)} className={`flex flex-col items-center gap-1 px-2 py-1 text-[10px] ${view === id ? "font-bold text-[var(--accent)]" : "text-muted"}`}><Icon size={19} /><span>{label}</span></button>)}</nav>
-      {bookingOpen && <BookingWizard key={`${bookingOptions.businessId}-${bookingOptions.serviceId}-${bookingOptions.step}`} initialStep={bookingOptions.step} initialBusinessId={bookingOptions.businessId} initialServiceId={bookingOptions.serviceId} coupons={coupons} onClose={() => { setBookingOpen(false); setReschedulingId(null); navigate("home"); }} onStepChange={navigateBookingStep} onConfirm={addBooking} />}
+      {bookingOpen && <BookingWizard key={`${bookingOptions.businessId}-${bookingOptions.serviceId}-${bookingOptions.step}-${reschedulingId ?? "new"}`} initialStep={bookingOptions.step} initialBusinessId={bookingOptions.businessId} initialServiceId={bookingOptions.serviceId} initialCustomer={appointments.find((item) => item.id === reschedulingId)?.customer} coupons={coupons} onClose={() => { setBookingOpen(false); setReschedulingId(null); navigate("home"); }} onStepChange={navigateBookingStep} onConfirm={addBooking} />}
       {toast && <div role="status" aria-live="polite" className="fixed bottom-20 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-medium text-white shadow-2xl sm:bottom-6"><Check size={16} className="text-[#8fc8a8]" />{toast}<button type="button" aria-label="Fechar aviso" className="ml-2 text-white/70" onClick={() => setToast("")}><X size={15} /></button></div>}
     </div>
   );

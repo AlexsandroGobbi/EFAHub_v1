@@ -34,13 +34,14 @@ export const staticWorkspacePaths = [
   ...["empresa", "servicos", "profissional", "data", "horario", "confirmacao"].map((step) => `/cliente/agendar/${step}`),
   "/profissional/inicio", "/profissional/agenda/dia", "/profissional/agenda/semana",
   "/profissional/atendimentos", "/profissional/clientes", "/profissional/comissoes", "/profissional/perfil",
+  "/profissional/agendamentos/novo",
   "/funcionario/inicio", "/funcionario/agenda", "/funcionario/agendamentos/novo",
   "/funcionario/clientes", "/funcionario/clientes/novo", "/funcionario/check-in", "/funcionario/caixa",
   "/empresa/inicio", "/empresa/agenda", "/empresa/clientes", "/empresa/profissionais",
   "/empresa/servicos", "/empresa/financeiro", "/empresa/relatorios", "/empresa/marketing",
   "/empresa/estoque", "/empresa/configuracoes", "/empresa/agendamentos/novo",
   "/plataforma/inicio", "/plataforma/empresas", "/plataforma/assinaturas",
-  "/plataforma/financeiro", "/plataforma/suporte", "/plataforma/auditoria"
+  "/plataforma/financeiro", "/plataforma/suporte", "/plataforma/auditoria", "/plataforma/agendamentos/novo"
 ] as const;
 
 export function defaultRoute(role: Role) {
@@ -50,10 +51,10 @@ export function defaultRoute(role: Role) {
 export function viewRoute(role: Role, view: ViewId) {
   const paths: Record<Role, Partial<Record<ViewId, string>>> = {
     client: { home: "inicio", search: "buscar", business: "empresa/atelier", companyServices: "empresa/atelier/servicos", appointments: "agendamentos", favorites: "favoritos", notifications: "notificacoes", profile: "perfil" },
-    professional: { home: "inicio", agenda: "agenda/dia", clients: "clientes", earnings: "comissoes", profile: "perfil" },
+    professional: { home: "inicio", agenda: "agenda/dia", clients: "clientes", earnings: "comissoes", profile: "perfil", newBooking: "agendamentos/novo" },
     employee: { home: "inicio", agenda: "agenda", clients: "clientes", checkin: "check-in", payments: "caixa", newBooking: "agendamentos/novo", newClient: "clientes/novo" },
     businessAdmin: { home: "inicio", agenda: "agenda", clients: "clientes", team: "profissionais", services: "servicos", finance: "financeiro", reports: "relatorios", marketing: "marketing", inventory: "estoque", settings: "configuracoes", newBooking: "agendamentos/novo" },
-    platformAdmin: { home: "inicio", businesses: "empresas", subscriptions: "assinaturas", finance: "financeiro", support: "suporte", audit: "auditoria" }
+    platformAdmin: { home: "inicio", businesses: "empresas", subscriptions: "assinaturas", finance: "financeiro", support: "suporte", audit: "auditoria", newBooking: "agendamentos/novo" }
   };
   return `/${areaNames[role]}/${paths[role][view] ?? "inicio"}`;
 }
@@ -86,6 +87,7 @@ export function parseWorkspaceRoute(area: string, segments: string[] = []): Pars
   if (role === "professional") {
     if (segments[0] === "inicio") return { role, view: "home" };
     if (segments[0] === "agenda") return { role, view: "agenda" };
+    if (path === "agendamentos/novo") return { role, view: "newBooking" };
     if (segments[0] === "atendimentos") return { role, view: "appointments" };
     if (segments[0] === "clientes") return { role, view: "clients" };
     if (segments[0] === "comissoes") return { role, view: "earnings" };
@@ -112,6 +114,7 @@ export function parseWorkspaceRoute(area: string, segments: string[] = []): Pars
   }
 
   if (role === "platformAdmin") {
+    if (path === "agendamentos/novo") return { role, view: "newBooking" };
     const views: Record<string, ViewId> = {
       inicio: "home", empresas: "businesses", assinaturas: "subscriptions", financeiro: "finance", suporte: "support", auditoria: "audit"
     };

@@ -1,7 +1,7 @@
 # Auditoria do EFAHub
 
 **Escopo:** aplicação web e fluxos demonstrativos existentes.  
-**Data:** 06/11/2026.
+**Data:** 15/11/2026.
 
 ## Resumo executivo
 
@@ -34,6 +34,10 @@ As notas são uma avaliação qualitativa do protótipo, não métricas de usuá
 - Combinadas seleção de data e horários na mesma etapa; incluídos filtros de serviço/profissional, cupom, status explicados, check-in e regras de cancelamento/reagendamento demonstrativas.
 - Criadas abas para dados pessoais, comunicação, privacidade/consentimentos e ajuda; os formulários não enviam nem persistem dados pessoais.
 - Criado gerenciamento demonstrativo de cupons, com validade, usos, tipo de desconto e restrição por serviço/campanha.
+- Aplicadas regras de escopo do cliente aos agendamentos demonstrativos; adicionadas ações operacionais de criar, alterar, cancelar e concluir em agendas de equipe e plataforma.
+- Adicionados gestão demonstrativa de convites/remoções de funcionários, controles de atrasos/faltas e comissão por combinação de serviço/profissional.
+- Caixa demonstrativo só permite anotar o recebimento presencial após a conclusão do atendimento; assinatura mostra renovação, atraso e cancelamento sem executar cobrança.
+- Registrada a política proposta de retenção de dados de até 10 anos, com ressalva de revisão jurídica e implementação segura.
 
 Essas melhorias de interface não substituem autenticação ou validação de regras no servidor.
 
@@ -41,15 +45,15 @@ Essas melhorias de interface não substituem autenticação ou validação de re
 
 | ID | Prioridade | Área | Achado | Estado |
 |---|---|---|---|---|
-| A1 | P0 — bloqueador de produção | Segurança/RBAC | O seletor de papel é apenas demonstrativo. Não há login, autorização de servidor nem enforcement de escopo por empresa nesta interface. A matriz em `architecture.md` é proposta, não controle ativo. | Pendente; implementar antes de expor dados reais. |
+| A1 | P0 — bloqueador de produção | Segurança/RBAC | O seletor de papel é apenas demonstrativo. Não há login, OTP ou autorização efetiva no app. O esquema inicial precisa de papéis globais separados, identidade de cliente verificada por OTP, RLS/RPCs alinhados à matriz e testes de isolamento por tenant. | Pendente; migração incremental e validação em projeto Supabase ainda necessárias antes de expor dados reais. |
 | A2 | P0 — bloqueador de produção | Agendamento/financeiro | A reserva é mantida em estado local; horários, cancelamentos, registros de caixa e comissões não são confirmados por serviço transacional. Não há proteção real contra dupla reserva ou replay. O app não deve processar pagamentos dos serviços; clientes pagam no estabelecimento. | Pendente; API e regras server-side necessárias. Se houver cobrança dentro do app, será somente a assinatura do EFAHub, ainda não integrada. |
 | A3 | P1 — alto | Produto/analytics | KPIs, gráficos, agenda e exemplos de clientes incluem valores fixos ou calculados sobre dados fictícios. Não podem orientar decisões de negócio. | Explicitado como demonstrativo; conectar a métricas auditáveis. |
-| A4 | P1 — alto | Operação | Cadastro, check-in, anotação de recebimentos presenciais, gestão de empresas, suporte e outros módulos ainda têm ações de demonstração ou conteúdo sem persistência. A navegação até a tela não significa que a operação esteja implementada. | Parcial; priorizar ações por jornada e permissão. O registro de caixa não processa o pagamento do serviço. |
+| A4 | P1 — alto | Operação | Convites, ajustes de comissão, status de assinatura e registros de caixa agora têm controles de demonstração, mas não salvam dados, enviam convites/notificações nem processam cobranças. | Parcial; conectar e auditar no servidor. O registro de caixa não processa o pagamento do serviço. |
 | A5 | P1 — alto | Deploy | O workflow GitHub Pages existente publica o protótipo HTML legado, não a aplicação Next.js. | Pendente; definir host Next.js ou estratégia de exportação/rotas antes da migração. |
 | A6 | P2 — médio | Arquitetura | `efahub-app.tsx` concentra dashboards, navegação, tema, reservas e módulos; tipos de rota dependem de um tipo exportado pelo componente. Isso aumenta acoplamento e custo de manutenção. | Pendente; separar domínios e contratos sem duplicar componentes. |
 | A7 | P2 — médio | UX/estados | Loading, erro recuperável, indisponibilidade, autorização negada e estados vazios não são consistentes entre as áreas; os formulários não cobrem todos os critérios de domínio do futuro backend. | Parcial; acrescentar estados ao conectar dados reais. |
 | A8 | P2 — médio | Acessibilidade | Foram adicionados foco visível e suporte de teclado ao diálogo; contraste, navegação completa com leitor de tela e critérios WCAG 2.2 ainda não foram auditados formalmente. | Parcial; requer axe/tecnologia assistiva e revisão de contraste por estado. |
-| A9 | P2 — médio | Design system | A paleta roxa está padronizada, mas várias telas ainda usam valores arbitrários de cor, raio e espaçamento em classes locais. | Parcial; consolidar os tokens CSS como fonte única. |
+| A9 | P2 — médio | Design system | A paleta vinho/bordô está padronizada, mas várias telas ainda usam valores arbitrários de cor, raio e espaçamento em classes locais. | Parcial; consolidar os tokens CSS como fonte única. |
 | A10 | P3 — baixo | Integrações | Fidelidade, cashback, WhatsApp, LGPD operacional, multiunidade e app mobile são itens de produto/arquitetura, não funcionalidades verificadas nesta UI. | Roadmap; não anunciar como disponíveis. |
 
 ## Verificações realizadas
@@ -69,7 +73,7 @@ Não foram executados testes de contraste automatizados, auditoria completa de t
 |---|---|---:|---:|
 | **Quick Wins** | Adicionar testes automatizados para rotas por perfil, preferências de tema e operações de interface já implementadas. | Alto | Baixo |
 | **Quick Wins** | Revisar estados vazios, rótulos e ações que ainda respondem somente com toast em cada fluxo. | Médio | Baixo |
-| **Projetos Estratégicos** | Implementar autenticação, papéis, escopo por tenant e políticas/RPCs server-side; testar isolamento entre empresas e privilégios da plataforma. | Crítico | Alto |
+| **Projetos Estratégicos** | Configurar Auth/OTP, papéis por tenant, administrador global separado, políticas/RPCs server-side e auditoria imutável; testar a matriz completa e o isolamento entre empresas. | Crítico | Alto |
 | **Projetos Estratégicos** | Implementar disponibilidade e reserva atômica/idempotente, estados de cancelamento, registro manual de recebimentos presenciais quando necessário e cobrança/conciliação das assinaturas EFAHub. | Crítico | Alto |
 | **Projetos Estratégicos** | Migrar módulos para domínios menores e conectar dashboards a consultas e métricas verificáveis. | Alto | Alto |
 | **Projetos Estratégicos** | Definir e validar deploy Next.js, observabilidade, backups e resposta a falhas. | Alto | Médio/alto |

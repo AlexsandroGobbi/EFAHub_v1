@@ -204,46 +204,68 @@ Neste protótipo, as URLs são resolvidas por `app/[area]/[[...segments]]/page.t
 
 Compartilhar controles e linguagem visual não significa compartilhar telas ou permissões. Layout, conteúdo, navegação e tarefas são específicos de cada papel.
 
-## 6. Matriz RBAC inicial
+## 6. Matriz RBAC acordada
 
-Legenda: **L** ler; **C** criar; **E** editar; **A** administrar; **—** sem acesso. As permissões devem ser aplicadas em policies/RPCs/endpoints, não apenas no frontend. Escopo `business_id` obrigatório para dados da empresa.
+Legenda: **L** ler; **C** criar; **E** editar; **X** excluir; **A** administrar; **—** sem acesso. “Próprio” significa somente os dados ligados à identidade autenticada. As permissões devem ser aplicadas em policies/RPCs no servidor e no banco, não apenas na interface. Todo dado operacional deve permanecer isolado por empresa.
 
-| Recurso/ação | Cliente | Profissional | Recepção | Admin empresa | Admin EFAHub |
+| Recurso/ação | Cliente | Profissional | Recepcionista | Admin Empresa | Admin EFAHub |
 |---|---:|---:|---:|---:|---:|
-| Catálogo público e disponibilidade | L | L (serviços próprios) | L | L/E | L agregado |
-| Próprios agendamentos | L/E limitado | L/E estado permitido | L/C/E operacional | L/C/E/A | L agregado |
-| Agenda de equipe | — | L (própria) | L/C/E operacional | L/C/E/A | L agregado |
-| Dados de clientes | L próprios | L mínimo e vinculados | L/C/E mínimo | L/C/E/A negócio | — por padrão |
-| Serviços e preços | L | L próprios | L | L/C/E/A | L agregado |
-| Equipe e permissões | — | L próprio perfil | L mínimo | L/C/E/A | A suporte excepcional e auditada |
-| Comissão própria | — | L própria | L lançamento autorizado | L/C/E/A | L agregado |
-| Financeiro do negócio | — | L da comissão própria | C recebimento limitado | L/C/E/A | —, exceto dados SaaS |
-| Marketing e comunicações | preferências próprias | — | — | L/C/E com consentimento | — |
-| Estoque | — | — | L/C movimento autorizado | L/C/E/A | — |
-| Assinatura/cobrança SaaS | L própria | — | — | L/E do próprio plano | A |
-| Empresas na plataforma | — | — | — | L própria | L/C/E/A |
-| Suporte | C próprio | C próprio | C próprio | L/C | A |
-| Auditoria | — | — | — | L das ações do próprio negócio | A plataforma |
+| Criar empresa | — | — | — | C própria, como contratante | C; deve vincular o proprietário contratante |
+| Editar dados da empresa | — | — | — | E própria | E |
+| Suspender/excluir empresa | — | — | — | — | A |
+| Ver informações da empresa | L | L | L | L | L |
+| Criar, editar, remover e ativar funcionários | — | — | — | A | A |
+| Definir permissões da equipe | — | — | — | A | A |
+| Visualizar equipe | — | L | L | L | L |
+| Criar/atualizar cadastro próprio de cliente | C/E próprio | — | — | — | — |
+| Criar/editar cadastro de cliente | — | C/E | C/E | C/E | C/E |
+| Excluir cadastro de cliente | — | — | X | X | X |
+| Visualizar clientes | L próprio | L | L | L | L |
+| Criar agendamento | C próprio | C | C | C | C |
+| Alterar próprio agendamento | E próprio, conforme regra da empresa | E | E | E | E |
+| Alterar/cancelar qualquer agendamento | — | E/A | E/A | E/A | E/A |
+| Cancelar/reagendar próprio agendamento | Conforme prazo e regras da empresa | E/A | E/A | E/A | E/A |
+| Confirmar atendimento/check-in | Conforme configuração da empresa | E | E | E | E |
+| Visualizar agenda completa | — | L | L | L | L |
+| Visualizar serviços | L | L | L | L | L |
+| Criar, editar, excluir serviços e configurar preço/duração | — | — | — | A | A |
+| Utilizar cupom | C próprio | — | C | C | C |
+| Criar/editar/excluir cupom | — | — | — | A | A |
+| Consultar uso de cupons | — | — | L | L | L |
+| Registrar pagamento presencial concluído | — | C | C | C | C |
+| Registrar sangria/suprimento | — | — | C | C | C |
+| Visualizar caixa | — | L | L | L | L |
+| Fechar/reabrir caixa | — | — / — | C / — | C / E | C / E |
+| Visualizar comissões | — | L próprias | L todas | L todas | L todas |
+| Configurar, ajustar ou estornar comissões | — | — | — | A | A |
+| Configurar cancelamento, remarcação, check-in, horários, comissões e notificações | — | — | — | A | A |
+| Visualizar agenda própria/relatório próprio | L próprio | L próprio | L | L | L |
+| Ver faturamento / produtividade | — / — | — / L própria | L / L | L / L | L / L |
+| Exportar relatórios | — | — | C | C | C |
+| Ver plano, alterar plano, atualizar cobrança ou cancelar assinatura | — | — | — | A própria | A |
+| Suspender assinatura | — | — | — | — | A |
+| Ler auditoria | — | — | — | L da própria empresa | L global |
+| Registrar ações críticas na auditoria | Via servidor | Via servidor | Via servidor | Via servidor | Via servidor |
 
-### Papéis a formalizar no backend
+### Identidade e papéis no banco
 
-- `client`: identidade cliente e preferências; associação às reservas próprias.
-- `barber`/`professional`: identidade de equipe ligada a um `staff_id`; acesso aos próprios atendimentos.
-- `receptionist`: ações operacionais limitadas, sem acesso executivo ou gestão de papéis.
-- `manager`/`business_admin`: administração delegada dentro de um negócio, conforme permissões.
-- `owner`: administração integral do próprio negócio e sua assinatura.
-- `platform_admin`: papel separado da associação ao negócio, acesso privilegiado mínimo e sempre auditado.
+- `owner` representa o proprietário que contrata e cadastra a empresa; `manager` representa o administrador da empresa. Ambos têm administração do próprio tenant, conforme a matriz.
+- `barber` é o nome legado da função `professional`; manter o mapeamento até concluir uma migração compatível.
+- `receptionist` representa a recepção.
+- O cliente precisa autenticar seu telefone por OTP antes de acessar ou alterar reservas. O telefone digitado num formulário não prova titularidade.
+- `platform_admin` deve ser uma associação global separada, nunca um papel que um administrador de empresa possa atribuir a si mesmo ou a outro membro. Toda ação global deve ser auditada.
+- Admin EFAHub pode criar o registro da empresa, mas deve associar o proprietário que contratou; isso não o torna dono.
 
-A migração Supabase atual define `owner`, `manager`, `barber` e `receptionist`, mas não define `client` nem `platform_admin`. Ela precisa de decisões de domínio, políticas RLS, testes de isolamento e revisão antes de ser considerada suficiente para este sitemap. Não colocar `service_role` no navegador nem tratar o seletor de perfil do protótipo como login.
+O esquema anterior é um MVP com nomes `businesses`/`business_id` e papéis `owner`, `manager`, `barber` e `receptionist`; ele não deve ser apagado ou reescrito enquanto não se confirmar se já foi aplicado. A migração incremental [202611150001_rbac_foundation.sql](../supabase/migrations/202611150001_rbac_foundation.sql) prepara identidade de cliente por OTP, registro separado de administradores globais, trilha de auditoria e tabelas de apoio. Ela ainda não implementa toda a matriz: fluxos de faturamento, gestão de caixa, cadastro de empresa pelo Admin EFAHub e algumas operações precisam de implementação e teste. A migração não foi aplicada a um projeto Supabase; até validar RLS/RPCs em um banco de teste, esta tabela é a regra de produto, não uma garantia de segurança disponível no app. Não colocar `service_role` no navegador nem tratar o seletor de perfil demonstrativo como login. Ver [regras de negócio](./business-rules.md).
 
 ## 7. Decisões pendentes antes de produção
 
-- Provedor de autenticação, recuperação de conta, MFA e fluxo de convites.
-- Separação entre identidade de cliente e associação de cliente por negócio.
+- Aplicar a migração incremental em um ambiente de teste após confirmar o estado da migração MVP; executar testes reais de RLS e RPC com usuários de cada papel/tenant.
+- Configuração do Supabase Auth para OTP por SMS, limites contra abuso, recuperação de acesso e fluxo de convites.
 - Entitlements/planos e limites comerciais; regras de bloqueio e contestação.
-- Regras para cancelamento de agendamentos e para anotar recebimentos realizados diretamente no estabelecimento.
-- Provedor, ciclos, renovação, atraso, cancelamento e conciliação das assinaturas pagas pelas empresas ao EFAHub.
-- Consentimento e retenção para campanhas, WhatsApp, analytics e preferências.
+- Provedor e conciliação das assinaturas recorrentes pagas pelas empresas ao EFAHub.
+- Revisão jurídica da retenção de dados pessoais por até 10 anos e do consentimento para campanhas, WhatsApp, analytics e preferências.
 - Requisitos fiscais, LGPD, suporte, auditoria, backups e resposta a incidentes.
 - API de disponibilidade e confirmação atômica para impedir dupla reserva.
 - Métricas e fórmulas auditáveis para MRR, ARR, churn, NPS e ocupação.
+- Cobertura de testes automatizados para cada ação da matriz, incluindo tentativas de acesso cruzado entre tenants e ações globais.

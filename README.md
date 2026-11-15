@@ -23,13 +23,17 @@ Abra `http://localhost:3000`. Os comandos de build e testes são `npm run build`
 - Paleta visual padronizada em tons de vinho/bordô (`#7A2438`, `#AD5368` e tons claros rosados), mantendo cores semânticas para status, avaliações e alertas.
 - Temas claro, escuro neutro e automático, com preferência local; no modo escuro, superfícies usam tons de preto e a identidade vinho da marca permanece como destaque.
 - Home do cliente vinculada à empresa do link demonstrativo, cadastro de perfil dividido em seções, regras demonstrativas para check-in/cancelamento e cupons por serviço.
+- Regras de negócio demonstrativas para equipe, gestão de agendamentos, atrasos/faltas, comissões, caixa presencial, assinatura EFAHub e retenção de dados.
 - [Mapa completo de navegação, rotas, wireframes, componentes e RBAC](./docs/architecture.md).
+- [Regras de negócio acordadas e pendências para produção](./docs/business-rules.md).
 - [Relatório de auditoria do produto, UX, UI, arquitetura e roadmap priorizado](./docs/audit-report.md).
 - [Como publicar e testar pelo GitHub Pages](./docs/deployment.md).
 
 ## Importante: protótipo, não sistema de produção
 
 O seletor de papel é somente uma prévia de interface. Não há login, autenticação, autorização RBAC, banco conectado, sincronização, pagamentos ou envio de notificações. Os registros e indicadores exibidos são fictícios; não use dados reais de clientes. Nenhuma operação privilegiada pode ser considerada protegida até que autorização e isolamento sejam verificados no backend.
+
+As telas de equipe, comissão, assinatura, regras e caixa agora permitem demonstrar as regras de produto; alguns estados ficam guardados temporariamente na sessão desta aba, mas nada é enviado nem salvo no servidor. O cadastro de uma empresa deve ser feito pelo proprietário durante a contratação; o administrador EFAHub não se torna dono da empresa. O backend/RLS atual ainda não corresponde integralmente à matriz de papéis nem implementa as cobranças e renovações descritas.
 
 **Regra de pagamento:** clientes pagam pelos serviços diretamente no estabelecimento. O EFAHub não deve oferecer checkout, Pix/cartão, cobrança, transferência ou estorno desses serviços. A única cobrança prevista dentro do produto é a assinatura que a empresa paga ao EFAHub. Um registro manual de caixa, se usado pela empresa, apenas anota um pagamento que já ocorreu presencialmente; não movimenta dinheiro.
 
@@ -51,9 +55,9 @@ O Next.js é a aplicação web. Apps mobile para cliente e profissional podem se
 
 ### Supabase e comunicações
 
-A migração `supabase/migrations/202611030001_mvp_core.sql` prepara isolamento por estabelecimento, papéis, regras de disponibilidade e conflito de agenda, snapshots de comissão e uma fila transacional para mensagens de WhatsApp. A Edge Function `supabase/functions/whatsapp-outbox` envia templates aprovados pela Meta. Nenhum desses componentes está implantado ou conectado à interface.
+A migração `supabase/migrations/202611030001_mvp_core.sql` prepara isolamento por estabelecimento, papéis, regras de disponibilidade e conflito de agenda, snapshots de comissão e uma fila transacional para mensagens de WhatsApp. A migração incremental `supabase/migrations/202611150001_rbac_foundation.sql` prepara suporte a cliente com telefone confirmado por OTP, administradores globais separados, auditoria e tabelas de apoio. Ela é uma fundação parcial: não cobre toda a matriz e não foi aplicada ou testada contra uma instância PostgreSQL/Supabase. A Edge Function `supabase/functions/whatsapp-outbox` envia templates aprovados pela Meta. Nenhum desses componentes está implantado ou conectado à interface.
 
-Antes de ativar, configure um projeto Supabase, revise e aplique as migrações, implemente Auth e políticas RLS, cubra isolamento com testes, conecte a aplicação às APIs/RPCs, configure os segredos do worker e agende seu processamento. O worker espera `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_API_VERSION`, `WHATSAPP_WORKER_SECRET` e os nomes `WHATSAPP_TEMPLATE_BOOKING_CONFIRMED`, `WHATSAPP_TEMPLATE_BOOKING_RESCHEDULED` e `WHATSAPP_TEMPLATE_BOOKING_CANCELLED`. Não registre segredos no repositório ou no frontend.
+Antes de ativar, confirme se a migração MVP já foi aplicada em cada ambiente. Não edite nem remova migrações já executadas; use sempre migrações incrementais. Revise e aplique as migrações em um ambiente de teste, configure Supabase Auth/OTP, valide cada policy/RPC e o isolamento com testes usando contas separadas, conecte a aplicação às APIs/RPCs, configure os segredos do worker e agende seu processamento. A migração de fundação não deve ser tratada como implementação completa do RBAC. O worker espera `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_API_VERSION`, `WHATSAPP_WORKER_SECRET` e os nomes `WHATSAPP_TEMPLATE_BOOKING_CONFIRMED`, `WHATSAPP_TEMPLATE_BOOKING_RESCHEDULED` e `WHATSAPP_TEMPLATE_BOOKING_CANCELLED`. Não registre segredos no repositório ou no frontend.
 
 ## Protótipo HTML legado
 
