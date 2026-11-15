@@ -20,8 +20,9 @@ Abra `http://localhost:3000`. Os comandos de build e testes são `npm run build`
 - Jornada guiada de agendamento com empresa, serviço, profissional, data, horário e confirmação.
 - Visões demonstrativas de agenda, CRM, atendimento, ganhos, caixa, serviços, equipe, marketing, estoque, assinaturas, suporte e auditoria.
 - Layouts responsivos e componentes base para métricas, agenda, tabelas, cards, notificações e estados de interface.
-- Paleta visual padronizada com o roxo EFAHub (`#7853D6`, `#A888FF` e tons lilás), mantendo cores semânticas para status, avaliações e alertas.
-- Temas claro, escuro neutro e automático, com preferência local; no modo escuro, superfícies usam tons de preto e o roxo da marca permanece como destaque.
+- Paleta visual padronizada em tons de vinho/bordô (`#7A2438`, `#AD5368` e tons claros rosados), mantendo cores semânticas para status, avaliações e alertas.
+- Temas claro, escuro neutro e automático, com preferência local; no modo escuro, superfícies usam tons de preto e a identidade vinho da marca permanece como destaque.
+- Home do cliente vinculada à empresa do link demonstrativo, cadastro de perfil dividido em seções, regras demonstrativas para check-in/cancelamento e cupons por serviço.
 - [Mapa completo de navegação, rotas, wireframes, componentes e RBAC](./docs/architecture.md).
 - [Relatório de auditoria do produto, UX, UI, arquitetura e roadmap priorizado](./docs/audit-report.md).
 - [Como publicar e testar pelo GitHub Pages](./docs/deployment.md).

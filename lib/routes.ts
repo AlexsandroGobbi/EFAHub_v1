@@ -58,7 +58,14 @@ export function viewRoute(role: Role, view: ViewId) {
   return `/${areaNames[role]}/${paths[role][view] ?? "inicio"}`;
 }
 
-const bookingRoutes = ["empresa", "servicos", "profissional", "data", "horario", "confirmacao"];
+const bookingRoutes: Record<string, number> = {
+  empresa: 0,
+  servicos: 1,
+  profissional: 2,
+  data: 3,
+  horario: 3,
+  confirmacao: 4
+};
 
 export function parseWorkspaceRoute(area: string, segments: string[] = []): ParsedWorkspaceRoute | null {
   const role = areas[area];
@@ -66,8 +73,8 @@ export function parseWorkspaceRoute(area: string, segments: string[] = []): Pars
   const path = segments.join("/");
 
   if (role === "client") {
-    const bookingIndex = segments[0] === "agendar" ? bookingRoutes.indexOf(segments[1] ?? "") : -1;
-    if (bookingIndex >= 0) return { role, view: "home", bookingStep: bookingIndex };
+    const bookingStep = segments[0] === "agendar" ? bookingRoutes[segments[1] ?? ""] : undefined;
+    if (bookingStep !== undefined) return { role, view: "home", bookingStep };
     if (segments[0] === "buscar") return { role, view: "search" };
     if (segments[0] === "empresa" && segments.length >= 2) return { role, view: segments.length >= 3 && segments[2] === "servicos" ? "companyServices" : "business", businessId: segments[1] };
     if (["inicio", "favoritos"].includes(segments[0] ?? "")) return { role, view: segments[0] === "favoritos" ? "favorites" : "home" };

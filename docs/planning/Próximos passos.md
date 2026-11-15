@@ -28,7 +28,9 @@ Na prática, isso significa:
 - Criada a aplicação principal em Next.js, React, TypeScript e Tailwind CSS.
 - Criadas páginas demonstrativas para os cinco papéis do EFAHub.
 - Montada uma jornada de demonstração de agendamento e telas para agenda, clientes, equipe, serviços, financeiro, marketing, estoque, suporte e auditoria.
-- Padronizada a identidade visual roxa e corrigidos contrastes e layouts em diferentes áreas.
+- Atualizada a identidade visual para tons de vinho/bordô e corrigidos contrastes e layouts em diferentes áreas.
+- Reorientada a home do cliente para os serviços da empresa vinculada; adicionados dados de perfil, preferências de comunicação, privacidade e suporte como telas demonstrativas.
+- Simplificado o agendamento para mostrar datas e horários na mesma etapa, com filtros e cupom; adicionados gestão demonstrativa de cupons, confirmação de presença, cancelamento e reagendamento sujeitos às regras configuradas pela empresa.
 - Adicionados os temas claro, escuro e automático.
 - Configurada uma versão estática para demonstração no GitHub Pages.
 - Guardado em `legacy/` o protótipo anterior, que não é a aplicação principal.

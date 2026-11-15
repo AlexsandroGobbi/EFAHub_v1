@@ -8,9 +8,9 @@ const config: Config = {
         ink: "#171916",
         muted: "#777b73",
         canvas: "#f6f7f5",
-        brand: "#7853d6",
-        "brand-light": "#f0eafa",
-        "brand-lilac": "#a888ff",
+        brand: "#7a2438",
+        "brand-light": "#f7e9ed",
+        "brand-wine-light": "#ad5368",
         success: "#217a5b"
       },
       boxShadow: {

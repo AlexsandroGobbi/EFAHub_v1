@@ -10,7 +10,7 @@ O EFAHub tem uma base visual consistente e cinco áreas demonstrativas, mas aind
 | Dimensão | Nota | Evidência e ressalva |
 |---|---:|---|
 | UX | 6/10 | Jornadas principais estão representadas; algumas ações continuam demonstrativas e não concluem operações reais. |
-| UI | 7/10 | Identidade roxa e componentes coerentes; tokens ainda coexistem com cores arbitrárias e não foi feita inspeção WCAG completa. |
+| UI | 7/10 | Identidade bordô/vinho e componentes coerentes; tokens ainda coexistem com cores arbitrárias e não foi feita inspeção WCAG completa. |
 | Performance | 6/10 | Build de produção concluído; o App Router reportou 63,1 kB para a rota principal e 166 kB de JS inicial. Não foi feito teste de rede, Core Web Vitals ou carga. |
 | Escalabilidade | 4/10 | Um componente cliente central concentra muitas áreas; não há serviços/APIs reais nem autorização multiempresa em execução. |
 | Produto | 4/10 | Cobertura visual dos perfis é ampla, mas boa parte dos módulos não possui regras, dados ou persistência operacionais. |
@@ -29,6 +29,11 @@ As notas são uma avaliação qualitativa do protótipo, não métricas de usuá
 - Reduzido o overflow horizontal do cabeçalho em telas estreitas.
 - Melhorado o diálogo de agendamento com foco inicial, contenção de foco por teclado, fechamento por Escape e restauração do foco.
 - Adicionadas preferências de movimento reduzido e foco de teclado visível.
+- Atualizada a paleta da aplicação para tons de vinho/bordô, mantendo a identidade também em botões, navegação, cartões, foco e tela inicial.
+- Direcionada a home do cliente aos serviços da empresa do link; no protótipo, a empresa padrão é o Ateliê Aurora.
+- Combinadas seleção de data e horários na mesma etapa; incluídos filtros de serviço/profissional, cupom, status explicados, check-in e regras de cancelamento/reagendamento demonstrativas.
+- Criadas abas para dados pessoais, comunicação, privacidade/consentimentos e ajuda; os formulários não enviam nem persistem dados pessoais.
+- Criado gerenciamento demonstrativo de cupons, com validade, usos, tipo de desconto e restrição por serviço/campanha.
 
 Essas melhorias de interface não substituem autenticação ou validação de regras no servidor.
 

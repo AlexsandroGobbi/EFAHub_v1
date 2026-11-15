@@ -1,5 +1,5 @@
 export type Role = "client" | "professional" | "employee" | "businessAdmin" | "platformAdmin";
-export type AppointmentStatus = "Confirmado" | "Aguardando" | "Concluído";
+export type AppointmentStatus = "Confirmado" | "Aguardando" | "Concluído" | "Cancelado";
 
 export type Appointment = {
   id: number;
@@ -10,6 +10,7 @@ export type Appointment = {
   time: string;
   status: AppointmentStatus;
   price: number;
+  presenceConfirmed?: boolean;
 };
 
 export type Booking = {
@@ -20,6 +21,7 @@ export type Booking = {
   date: string;
   time: string;
   price: number;
+  couponCode?: string;
 };
 
 export const businesses = [
@@ -29,10 +31,10 @@ export const businesses = [
 ];
 
 export const services = [
-  { id: "cut", name: "Corte personalizado", duration: "45 min", price: 85 },
-  { id: "color", name: "Coloração", duration: "90 min", price: 180 },
-  { id: "beard", name: "Corte + barba", duration: "60 min", price: 95 },
-  { id: "skin", name: "Limpeza de pele", duration: "60 min", price: 160 }
+  { id: "cut", name: "Corte personalizado", duration: "45 min", price: 85, category: "Cabelo", type: "No estabelecimento" },
+  { id: "color", name: "Coloração", duration: "90 min", price: 180, category: "Cabelo", type: "No estabelecimento" },
+  { id: "beard", name: "Corte + barba", duration: "60 min", price: 95, category: "Barba", type: "No estabelecimento" },
+  { id: "skin", name: "Limpeza de pele", duration: "60 min", price: 160, category: "Estética", type: "No estabelecimento" }
 ];
 
 export const professionals = [
